@@ -199,6 +199,19 @@ export default function Workspace() {
     }
   };
 
+  // Load preview URL from localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem(`preview-url-${projectId}`);
+    if (saved) setPreviewUrl(saved);
+  }, [projectId]);
+
+  // Save preview URL to localStorage
+  useEffect(() => {
+    if (projectId) {
+      localStorage.setItem(`preview-url-${projectId}`, previewUrl);
+    }
+  }, [previewUrl, projectId]);
+
   useEffect(() => {
     if (chats.length > 0 && !currentChatId) {
       setCurrentChatId(chats[0].id);
@@ -364,6 +377,16 @@ export default function Workspace() {
           <span className="text-xs text-muted-foreground px-1.5 py-0.5 bg-white/5 rounded hidden sm:inline flex-shrink-0">{project?.model}</span>
         </div>
         <div className="flex gap-1 flex-shrink-0">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="h-7 w-7" 
+            data-testid="button-download"
+            onClick={downloadFiles}
+            title="Download all files as ZIP"
+          >
+            <Download className="h-3.5 w-3.5" />
+          </Button>
           <Button 
             variant="ghost" 
             size="icon" 
@@ -626,18 +649,8 @@ export default function Workspace() {
             {showFiles && (
               <>
                 <div className="h-full flex flex-col bg-card/30">
-                  <div className="h-6 border-b border-white/5 px-2 flex items-center justify-between text-xs font-semibold text-muted-foreground bg-card/50">
+                  <div className="h-6 border-b border-white/5 px-2 flex items-center text-xs font-semibold text-muted-foreground bg-card/50">
                     <span>Files</span>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-4 w-4"
-                      onClick={downloadFiles}
-                      title="Download all files as ZIP"
-                      data-testid="button-download-files"
-                    >
-                      <FileText className="h-2.5 w-2.5" />
-                    </Button>
                   </div>
                   <ScrollArea className="flex-1">
                     <div className="p-1.5">
