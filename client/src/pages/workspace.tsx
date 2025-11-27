@@ -2,13 +2,12 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useParams, useLocation } from "wouter";
 import {
-  ChevronLeft, Send, Folder, FileText, Plus, Terminal, MessageSquare,
-  Settings, Loader2, FolderOpen, ChevronDown, Eye, Code, Copy, X, Play, Square
+  ChevronLeft, Send, Folder, FileText, Plus, MessageSquare, Settings, 
+  Loader2, FolderOpen, ChevronDown, X, ChevronRight
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
@@ -59,21 +58,16 @@ export default function Workspace() {
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
   
-  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
   const [fileContent, setFileContent] = useState<string>("");
   const [isFileModified, setIsFileModified] = useState(false);
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
   const [inputMessage, setInputMessage] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
-  const [messageQueue, setMessageQueue] = useState<string[]>([]);
-  const [terminalOutput, setTerminalOutput] = useState<string>("");
-  const [thinkingMessage, setThinkingMessage] = useState("");
+  const [chatOpen, setChatOpen] = useState(true);
   
   const wsRef = useRef<WebSocket | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const terminalEndRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
 
   const { data: project } = useQuery<Project>({
     queryKey: ["project", projectId],
@@ -153,46 +147,19 @@ export default function Workspace() {
       const data: AgentEvent = JSON.parse(event.data);
       
       switch (data.type) {
-        case "thinking":
-          setIsStreaming(true);
-          setThinkingMessage("Thinking...");
-          break;
-        case "content":
-          setThinkingMessage("");
-          setTerminalOutput((prev) => prev + (data.content || ""));
-          break;
-        case "tool_call":
-          if (data.toolCall) {
-            setTerminalOutput((prev) => prev + `\n→ Executing: ${data.toolCall?.name}\n`);
-          }
-          break;
-        case "tool_result":
-          if (data.toolResult) {
-            setTerminalOutput((prev) => prev + `✓ ${data.toolResult?.name}\n${data.toolResult?.result}\n`);
-            refetchFiles();
-          }
-          break;
         case "done":
           setIsStreaming(false);
-          setThinkingMessage("");
           refetchMessages();
-          setTerminalOutput("");
-          setMessageQueue((prev) => prev.slice(1));
+          refetchFiles();
           break;
         case "error":
           setIsStreaming(false);
-          setThinkingMessage("");
-          setTerminalOutput((prev) => prev + `\n✗ Error: ${data.error}\n`);
           break;
       }
     };
 
     ws.onerror = (error) => {
       console.error("WebSocket error:", error);
-    };
-
-    ws.onclose = () => {
-      console.log("WebSocket closed");
     };
 
     return () => {
@@ -204,24 +171,18 @@ export default function Workspace() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  useEffect(() => {
-    terminalEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [terminalOutput, thinkingMessage]);
-
   const sendMessage = useCallback(() => {
     if (!inputMessage.trim() || !wsRef.current) return;
     
     const msg = inputMessage.trim();
-    setMessageQueue((prev) => [...prev, msg]);
     setInputMessage("");
+    setIsStreaming(true);
     
-    if (!isStreaming) {
-      wsRef.current.send(JSON.stringify({
-        type: "message",
-        content: msg,
-      }));
-    }
-  }, [inputMessage, isStreaming]);
+    wsRef.current.send(JSON.stringify({
+      type: "message",
+      content: msg,
+    }));
+  }, [inputMessage]);
 
   const loadFile = async (path: string) => {
     try {
@@ -280,12 +241,12 @@ export default function Workspace() {
       <>
         {directories.map((dir) => (
           <Collapsible key={dir.id} open={isOpen} onOpenChange={setIsOpen}>
-            <CollapsibleTrigger className="flex items-center gap-1 w-full px-2 py-1 hover:bg-white/5 rounded text-sm">
+            <CollapsibleTrigger className="flex items-center gap-1 w-full px-2 py-1 hover:bg-white/5 rounded text-xs">
               <ChevronDown className={`h-3 w-3 transition-transform ${isOpen ? "" : "-rotate-90"}`} />
-              <FolderOpen className="h-4 w-4 text-yellow-500" />
+              <FolderOpen className="h-3 w-3 text-yellow-500" />
               <span className="truncate">{dir.path.split("/").pop()}</span>
             </CollapsibleTrigger>
-            <CollapsibleContent className="pl-4">
+            <CollapsibleContent className="pl-3">
               <FileTreeNode path={dir.path} depth={depth + 1} />
             </CollapsibleContent>
           </Collapsible>
@@ -293,14 +254,14 @@ export default function Workspace() {
         {filesInDir.map((file) => (
           <div
             key={file.id}
-            className={`flex items-center gap-2 px-2 py-1 hover:bg-white/5 rounded text-sm cursor-pointer ${
+            className={`flex items-center gap-2 px-2 py-1 hover:bg-white/5 rounded text-xs cursor-pointer ${
               selectedFile === file.path ? "bg-primary/20 text-primary" : ""
             }`}
             onClick={() => loadFile(file.path)}
             data-testid={`file-${file.path}`}
           >
-            <FileText className="h-4 w-4 text-blue-400" />
-            <span className="truncate">{file.path.split("/").pop()}</span>
+            <FileText className="h-3 w-3 text-blue-400" />
+            <span className="truncate text-xs">{file.path.split("/").pop()}</span>
           </div>
         ))}
       </>
@@ -310,9 +271,9 @@ export default function Workspace() {
   const renderMessage = (msg: Message) => {
     const isUser = msg.role === "user";
     return (
-      <div key={msg.id} className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
-        <div className={`max-w-[75%] rounded-lg px-4 py-3 ${isUser ? "bg-primary text-primary-foreground" : "bg-card/80 border border-white/5"}`}>
-          <div className="whitespace-pre-wrap text-sm">{msg.content}</div>
+      <div key={msg.id} className={`flex ${isUser ? "justify-end" : "justify-start"} mb-2`}>
+        <div className={`max-w-[85%] rounded px-3 py-2 text-xs ${isUser ? "bg-primary text-primary-foreground" : "bg-card/80 border border-white/5"}`}>
+          <div className="whitespace-pre-wrap">{msg.content}</div>
         </div>
       </div>
     );
@@ -321,36 +282,36 @@ export default function Workspace() {
   return (
     <div className="h-screen flex flex-col bg-background">
       {/* Header */}
-      <header className="h-12 border-b border-white/5 bg-card/50 flex items-center justify-between px-4">
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => setLocation("/dashboard")} data-testid="button-back">
-            <ChevronLeft className="h-5 w-5" />
+      <header className="h-10 border-b border-white/5 bg-card/50 flex items-center justify-between px-3">
+        <div className="flex items-center gap-2 min-w-0">
+          <Button variant="ghost" size="icon" onClick={() => setLocation("/dashboard")} className="h-7 w-7" data-testid="button-back">
+            <ChevronLeft className="h-4 w-4" />
           </Button>
-          <span className="font-display font-bold text-sm">DANIEL<span className="text-primary">AI</span></span>
-          <span className="text-muted-foreground">/</span>
-          <h1 className="font-display font-semibold">{project?.name || "Loading..."}</h1>
-          <span className="text-xs text-muted-foreground px-2 py-0.5 bg-white/5 rounded">{project?.model}</span>
+          <span className="font-bold text-xs hidden sm:inline">DANIEL<span className="text-primary">AI</span></span>
+          <span className="text-muted-foreground text-xs">/</span>
+          <h1 className="font-semibold text-xs truncate">{project?.name || "Loading..."}</h1>
+          <span className="text-xs text-muted-foreground px-1.5 py-0.5 bg-white/5 rounded">{project?.model}</span>
         </div>
-        <Button variant="ghost" size="icon" data-testid="button-settings">
-          <Settings className="h-4 w-4" />
+        <Button variant="ghost" size="icon" className="h-7 w-7" data-testid="button-settings">
+          <Settings className="h-3 w-3" />
         </Button>
       </header>
 
       {/* Main Content */}
       <div className="flex-1 flex overflow-hidden">
         <ResizablePanelGroup direction="horizontal">
-          {/* Left Sidebar - Files */}
-          <ResizablePanel defaultSize={18} minSize={12} maxSize={30}>
+          {/* Files Sidebar */}
+          <ResizablePanel defaultSize={16} minSize={12} maxSize={25}>
             <div className="h-full flex flex-col bg-card/30 border-r border-white/5">
-              <div className="flex border-b border-white/5 p-2">
-                <Folder className="h-4 w-4 mr-2 text-muted-foreground" />
-                <span className="text-xs font-medium">Files</span>
+              <div className="flex border-b border-white/5 p-2 items-center gap-2">
+                <Folder className="h-3.5 w-3.5 text-muted-foreground" />
+                <span className="text-xs font-semibold">Files</span>
               </div>
               <ScrollArea className="flex-1">
-                <div className="p-2">
+                <div className="p-1.5">
                   <FileTreeNode path="" />
                   {files.length === 0 && (
-                    <div className="text-center py-8 text-muted-foreground text-xs">No files</div>
+                    <div className="text-center py-6 text-muted-foreground text-xs">No files</div>
                   )}
                 </div>
               </ScrollArea>
@@ -359,148 +320,148 @@ export default function Workspace() {
 
           <ResizableHandle withHandle />
 
-          {/* Right Main Area */}
-          <ResizablePanel defaultSize={82}>
-            <ResizablePanelGroup direction="vertical">
-              {/* Top - Preview & Code Editor */}
-              <ResizablePanel defaultSize={40} minSize={20}>
-                <ResizablePanelGroup direction="horizontal">
-                  {/* Preview */}
-                  <ResizablePanel defaultSize={50}>
-                    <div className="h-full flex flex-col bg-card/20 border-r border-white/5">
-                      <div className="h-9 border-b border-white/5 flex items-center px-3 bg-card/50 gap-2">
-                        <Eye className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-xs font-medium">Preview</span>
-                      </div>
-                      <div className="flex-1 overflow-auto">
-                        <iframe
-                          src={`http://localhost:5173/`}
-                          className="w-full h-full border-0"
-                          title="Preview"
-                        />
-                      </div>
+          {/* Code Editor */}
+          {selectedFile && (
+            <>
+              <ResizablePanel defaultSize={28} minSize={20}>
+                <div className="h-full flex flex-col bg-background">
+                  <div className="h-8 border-b border-white/5 flex items-center justify-between px-3 bg-card/50 text-xs">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <FileText className="h-3 w-3 text-blue-400 flex-shrink-0" />
+                      <span className="font-mono truncate">{selectedFile}</span>
+                      {isFileModified && <span className="h-1.5 w-1.5 rounded-full bg-yellow-500 flex-shrink-0" />}
                     </div>
-                  </ResizablePanel>
-
-                  <ResizableHandle withHandle />
-
-                  {/* Code Editor */}
-                  {selectedFile && (
-                    <ResizablePanel defaultSize={50}>
-                      <div className="h-full flex flex-col">
-                        <div className="h-9 border-b border-white/5 flex items-center justify-between px-3 bg-card/50">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <FileText className="h-4 w-4 text-blue-400 flex-shrink-0" />
-                            <span className="text-xs font-mono truncate">{selectedFile}</span>
-                            {isFileModified && <span className="h-2 w-2 rounded-full bg-yellow-500 flex-shrink-0" />}
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={saveFile}
-                            disabled={!isFileModified}
-                            className="h-6 w-6"
-                          >
-                            <Copy className="h-3 w-3" />
-                          </Button>
-                        </div>
-                        <textarea
-                          value={fileContent}
-                          onChange={(e) => {
-                            setFileContent(e.target.value);
-                            setIsFileModified(true);
-                          }}
-                          className="flex-1 font-mono text-xs p-3 bg-background/50 border-0 resize-none focus:outline-none focus:ring-0"
-                          spellCheck="false"
-                          data-testid="editor-content"
-                        />
-                      </div>
-                    </ResizablePanel>
-                  )}
-                </ResizablePanelGroup>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={saveFile}
+                      disabled={!isFileModified}
+                      className="h-6 w-6"
+                      title="Save file"
+                    >
+                      <Plus className="h-3 w-3" />
+                    </Button>
+                  </div>
+                  <textarea
+                    value={fileContent}
+                    onChange={(e) => {
+                      setFileContent(e.target.value);
+                      setIsFileModified(true);
+                    }}
+                    className="flex-1 font-mono text-xs p-2 bg-background/50 border-0 resize-none focus:outline-none focus:ring-0 leading-relaxed"
+                    spellCheck="false"
+                    data-testid="editor-content"
+                  />
+                </div>
               </ResizablePanel>
 
               <ResizableHandle withHandle />
+            </>
+          )}
 
-              {/* Bottom - Chat + Terminal */}
-              <ResizablePanel defaultSize={60}>
-                <ResizablePanelGroup direction="horizontal">
-                  {/* Chat */}
-                  <ResizablePanel defaultSize={60}>
-                    <div className="h-full flex flex-col bg-background">
-                      <div className="h-9 border-b border-white/5 flex items-center px-3 bg-card/50">
-                        <MessageSquare className="h-4 w-4 mr-2 text-muted-foreground" />
-                        <span className="text-xs font-medium">Chat</span>
-                      </div>
-                      
-                      <ScrollArea className="flex-1 p-3">
-                        <div className="space-y-3">
-                          {messages.map(renderMessage)}
-                          <div ref={messagesEndRef} />
-                        </div>
-                      </ScrollArea>
-
-                      <div className="border-t border-white/5 p-3 bg-card/30 space-y-2">
-                        {messageQueue.length > 0 && (
-                          <div className="text-xs text-muted-foreground px-2 py-1 bg-white/5 rounded">
-                            Queue: {messageQueue.length} message{messageQueue.length !== 1 ? 's' : ''} waiting
-                          </div>
-                        )}
-                        <div className="flex gap-2">
-                          <Input
-                            ref={inputRef}
-                            value={inputMessage}
-                            onChange={(e) => setInputMessage(e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter" && !e.shiftKey) {
-                                e.preventDefault();
-                                sendMessage();
-                              }
-                            }}
-                            placeholder="Tell the AI what to build..."
-                            disabled={false}
-                            className="flex-1 h-9 bg-background/50 border-white/10 text-sm"
-                            data-testid="input-message"
-                          />
-                          <Button
-                            onClick={sendMessage}
-                            disabled={!inputMessage.trim()}
-                            size="sm"
-                            data-testid="button-send"
-                          >
-                            {isStreaming ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  </ResizablePanel>
-
-                  <ResizableHandle withHandle />
-
-                  {/* Terminal */}
-                  <ResizablePanel defaultSize={40}>
-                    <div className="h-full flex flex-col bg-background">
-                      <div className="h-9 border-b border-white/5 flex items-center justify-between px-3 bg-card/50">
-                        <div className="flex items-center gap-2">
-                          <Terminal className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-xs font-medium">Terminal</span>
-                        </div>
-                        {isStreaming && <Loader2 className="h-3 w-3 animate-spin text-yellow-500" />}
-                      </div>
-                      
-                      <ScrollArea className="flex-1">
-                        <div className="font-mono text-xs p-3 text-muted-foreground whitespace-pre-wrap">
-                          {terminalOutput}
-                          {thinkingMessage && <div className="flex items-center gap-2"><Loader2 className="h-3 w-3 animate-spin" />{thinkingMessage}</div>}
-                          <div ref={terminalEndRef} />
-                        </div>
-                      </ScrollArea>
-                    </div>
-                  </ResizablePanel>
-                </ResizablePanelGroup>
-              </ResizablePanel>
-            </ResizablePanelGroup>
+          {/* Preview */}
+          <ResizablePanel defaultSize={selectedFile ? 56 : 84}>
+            <div className="h-full flex flex-col bg-background">
+              <div className="h-8 border-b border-white/5 px-3 flex items-center text-xs font-semibold text-muted-foreground bg-card/50">
+                Preview
+              </div>
+              <iframe
+                src="http://localhost:5000/"
+                className="flex-1 border-0 bg-white"
+                title="App Preview"
+                sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
+              />
+            </div>
           </ResizablePanel>
+
+          {/* Chat Sidebar */}
+          {chatOpen && (
+            <>
+              <ResizableHandle withHandle />
+              <ResizablePanel defaultSize={18} minSize={15} maxSize={30}>
+                <div className="h-full flex flex-col bg-card/30 border-l border-white/5">
+                  <div className="h-8 border-b border-white/5 flex items-center justify-between px-3 bg-card/50">
+                    <div className="flex items-center gap-2">
+                      <MessageSquare className="h-3.5 w-3.5 text-muted-foreground" />
+                      <span className="text-xs font-semibold">Chat</span>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setChatOpen(false)}
+                      className="h-5 w-5"
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </div>
+
+                  {/* Chats List */}
+                  <div className="border-b border-white/5 p-1.5">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full h-7 text-xs border-dashed border-white/10"
+                      onClick={() => createChat.mutate()}
+                      data-testid="button-new-chat"
+                    >
+                      <Plus className="h-3 w-3 mr-1" />
+                      New
+                    </Button>
+                  </div>
+
+                  {/* Messages */}
+                  <ScrollArea className="flex-1">
+                    <div className="p-2">
+                      {messages.map(renderMessage)}
+                      <div ref={messagesEndRef} />
+                    </div>
+                  </ScrollArea>
+
+                  {/* Input */}
+                  <div className="border-t border-white/5 p-2 bg-card/50 space-y-1.5">
+                    <div className="flex gap-1.5">
+                      <Input
+                        value={inputMessage}
+                        onChange={(e) => setInputMessage(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && !e.shiftKey) {
+                            e.preventDefault();
+                            sendMessage();
+                          }
+                        }}
+                        placeholder="Ask AI..."
+                        disabled={isStreaming}
+                        className="flex-1 h-7 text-xs bg-background/50 border-white/10"
+                        data-testid="input-message"
+                      />
+                      <Button
+                        onClick={sendMessage}
+                        disabled={isStreaming || !inputMessage.trim()}
+                        size="sm"
+                        className="h-7 px-2"
+                        data-testid="button-send"
+                      >
+                        {isStreaming ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </ResizablePanel>
+            </>
+          )}
+
+          {/* Chat Toggle */}
+          {!chatOpen && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setChatOpen(true)}
+              className="h-full w-8 rounded-none border-l border-white/5"
+              title="Open chat"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+          )}
         </ResizablePanelGroup>
       </div>
     </div>
