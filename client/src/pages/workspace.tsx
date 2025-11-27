@@ -1,33 +1,16 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useParams, useLocation } from "wouter";
-import { motion, AnimatePresence } from "framer-motion";
 import {
-  ChevronLeft, ChevronRight, Send, Folder, FileText, Plus,
-  Terminal, MessageSquare, Settings, Play, Square, Loader2,
-  FolderOpen, ChevronDown, MoreVertical, Trash2, Edit2, Save, X
+  ChevronLeft, Send, Folder, FileText, Plus, Terminal, MessageSquare,
+  Settings, Loader2, FolderOpen, ChevronDown, Eye, Code, Copy, X, Play, Square
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  ResizableHandle,
-  ResizablePanel,
-  ResizablePanelGroup,
-} from "@/components/ui/resizable";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 interface Project {
   id: string;
@@ -76,26 +59,22 @@ export default function Workspace() {
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
   
-  // UI State
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [activeTab, setActiveTab] = useState<"chat" | "files" | "terminal">("chat");
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
   const [fileContent, setFileContent] = useState<string>("");
   const [isFileModified, setIsFileModified] = useState(false);
-  
-  // Chat State
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
   const [inputMessage, setInputMessage] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
-  const [streamingContent, setStreamingContent] = useState("");
-  const [streamingToolCalls, setStreamingToolCalls] = useState<any[]>([]);
-  const [streamingToolResults, setStreamingToolResults] = useState<any[]>([]);
+  const [messageQueue, setMessageQueue] = useState<string[]>([]);
+  const [terminalOutput, setTerminalOutput] = useState<string>("");
+  const [thinkingMessage, setThinkingMessage] = useState("");
   
-  // WebSocket
   const wsRef = useRef<WebSocket | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  
-  // Fetch project
+  const terminalEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
   const { data: project } = useQuery<Project>({
     queryKey: ["project", projectId],
     queryFn: async () => {
@@ -106,7 +85,6 @@ export default function Workspace() {
     enabled: !!projectId,
   });
 
-  // Fetch chats
   const { data: chats = [] } = useQuery<Chat[]>({
     queryKey: ["chats", projectId],
     queryFn: async () => {
@@ -117,7 +95,6 @@ export default function Workspace() {
     enabled: !!projectId,
   });
 
-  // Fetch messages for current chat
   const { data: messages = [], refetch: refetchMessages } = useQuery<Message[]>({
     queryKey: ["messages", currentChatId],
     queryFn: async () => {
@@ -128,7 +105,6 @@ export default function Workspace() {
     enabled: !!currentChatId,
   });
 
-  // Fetch files
   const { data: files = [], refetch: refetchFiles } = useQuery<FileNode[]>({
     queryKey: ["files", projectId],
     queryFn: async () => {
@@ -139,7 +115,6 @@ export default function Workspace() {
     enabled: !!projectId,
   });
 
-  // Create chat mutation
   const createChat = useMutation({
     mutationFn: async () => {
       const res = await fetch(`/api/projects/${projectId}/chats`, {
@@ -156,7 +131,6 @@ export default function Workspace() {
     },
   });
 
-  // Set default chat
   useEffect(() => {
     if (chats.length > 0 && !currentChatId) {
       setCurrentChatId(chats[0].id);
@@ -179,40 +153,36 @@ export default function Workspace() {
       const data: AgentEvent = JSON.parse(event.data);
       
       switch (data.type) {
-        case "joined":
-          console.log("Joined chat:", data);
-          break;
         case "thinking":
           setIsStreaming(true);
-          setStreamingContent("");
-          setStreamingToolCalls([]);
-          setStreamingToolResults([]);
+          setThinkingMessage("Thinking...");
           break;
         case "content":
-          setStreamingContent((prev) => prev + (data.content || ""));
+          setThinkingMessage("");
+          setTerminalOutput((prev) => prev + (data.content || ""));
           break;
         case "tool_call":
           if (data.toolCall) {
-            setStreamingToolCalls((prev) => [...prev, data.toolCall]);
+            setTerminalOutput((prev) => prev + `\n→ Executing: ${data.toolCall?.name}\n`);
           }
           break;
         case "tool_result":
           if (data.toolResult) {
-            setStreamingToolResults((prev) => [...prev, data.toolResult]);
-            // Refresh files after tool execution
+            setTerminalOutput((prev) => prev + `✓ ${data.toolResult?.name}\n${data.toolResult?.result}\n`);
             refetchFiles();
           }
           break;
         case "done":
           setIsStreaming(false);
+          setThinkingMessage("");
           refetchMessages();
-          setStreamingContent("");
-          setStreamingToolCalls([]);
-          setStreamingToolResults([]);
+          setTerminalOutput("");
+          setMessageQueue((prev) => prev.slice(1));
           break;
         case "error":
           setIsStreaming(false);
-          console.error("Agent error:", data.error);
+          setThinkingMessage("");
+          setTerminalOutput((prev) => prev + `\n✗ Error: ${data.error}\n`);
           break;
       }
     };
@@ -230,24 +200,29 @@ export default function Workspace() {
     };
   }, [projectId, currentChatId, refetchMessages, refetchFiles]);
 
-  // Scroll to bottom on new messages
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, streamingContent]);
+  }, [messages]);
 
-  // Send message
+  useEffect(() => {
+    terminalEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [terminalOutput, thinkingMessage]);
+
   const sendMessage = useCallback(() => {
-    if (!inputMessage.trim() || !wsRef.current || isStreaming) return;
+    if (!inputMessage.trim() || !wsRef.current) return;
     
-    wsRef.current.send(JSON.stringify({
-      type: "message",
-      content: inputMessage,
-    }));
-    
+    const msg = inputMessage.trim();
+    setMessageQueue((prev) => [...prev, msg]);
     setInputMessage("");
+    
+    if (!isStreaming) {
+      wsRef.current.send(JSON.stringify({
+        type: "message",
+        content: msg,
+      }));
+    }
   }, [inputMessage, isStreaming]);
 
-  // Load file content
   const loadFile = async (path: string) => {
     try {
       const res = await fetch(`/api/projects/${projectId}/files/content?path=${encodeURIComponent(path)}`);
@@ -261,7 +236,6 @@ export default function Workspace() {
     }
   };
 
-  // Save file
   const saveFile = async () => {
     if (!selectedFile) return;
     
@@ -279,10 +253,8 @@ export default function Workspace() {
     }
   };
 
-  // Build file tree
   const buildFileTree = (files: FileNode[]) => {
     const tree: Record<string, FileNode[]> = { "": [] };
-    
     for (const file of files) {
       const parts = file.path.split("/");
       if (parts.length === 1) {
@@ -293,13 +265,11 @@ export default function Workspace() {
         tree[parent].push(file);
       }
     }
-    
     return tree;
   };
 
   const fileTree = buildFileTree(files);
 
-  // Render file tree
   const FileTreeNode = ({ path, depth = 0 }: { path: string; depth?: number }) => {
     const [isOpen, setIsOpen] = useState(depth < 2);
     const children = fileTree[path] || [];
@@ -337,43 +307,12 @@ export default function Workspace() {
     );
   };
 
-  // Render message
   const renderMessage = (msg: Message) => {
     const isUser = msg.role === "user";
-    const isTool = msg.role === "tool";
-
-    if (isTool) {
-      return (
-        <div key={msg.id} className="px-4 py-2 text-xs font-mono bg-black/20 rounded border border-white/5">
-          <div className="text-muted-foreground mb-1">Tool Results:</div>
-          <pre className="whitespace-pre-wrap text-green-400">{msg.content}</pre>
-        </div>
-      );
-    }
-
     return (
-      <div
-        key={msg.id}
-        className={`flex ${isUser ? "justify-end" : "justify-start"}`}
-      >
-        <div
-          className={`max-w-[80%] rounded-lg px-4 py-3 ${
-            isUser
-              ? "bg-primary text-primary-foreground"
-              : "bg-card/80 border border-white/5"
-          }`}
-        >
-          <div className="whitespace-pre-wrap">{msg.content}</div>
-          {msg.toolCalls && msg.toolCalls.length > 0 && (
-            <div className="mt-2 pt-2 border-t border-white/10 text-xs">
-              <div className="text-muted-foreground mb-1">Tool Calls:</div>
-              {msg.toolCalls.map((tc: any, i: number) => (
-                <div key={i} className="font-mono text-yellow-400">
-                  {tc.name}({JSON.stringify(tc.arguments).slice(0, 50)}...)
-                </div>
-              ))}
-            </div>
-          )}
+      <div key={msg.id} className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
+        <div className={`max-w-[75%] rounded-lg px-4 py-3 ${isUser ? "bg-primary text-primary-foreground" : "bg-card/80 border border-white/5"}`}>
+          <div className="whitespace-pre-wrap text-sm">{msg.content}</div>
         </div>
       </div>
     );
@@ -384,238 +323,181 @@ export default function Workspace() {
       {/* Header */}
       <header className="h-12 border-b border-white/5 bg-card/50 flex items-center justify-between px-4">
         <div className="flex items-center gap-3">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setLocation("/dashboard")}
-            data-testid="button-back"
-          >
+          <Button variant="ghost" size="icon" onClick={() => setLocation("/dashboard")} data-testid="button-back">
             <ChevronLeft className="h-5 w-5" />
           </Button>
-          <span className="font-display font-bold text-sm">DANIEL<span className="text-primary"> AI</span></span>
+          <span className="font-display font-bold text-sm">DANIEL<span className="text-primary">AI</span></span>
           <span className="text-muted-foreground">/</span>
           <h1 className="font-display font-semibold">{project?.name || "Loading..."}</h1>
-          <span className="text-xs text-muted-foreground px-2 py-0.5 bg-white/5 rounded">
-            {project?.model}
-          </span>
+          <span className="text-xs text-muted-foreground px-2 py-0.5 bg-white/5 rounded">{project?.model}</span>
         </div>
-        
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" data-testid="button-settings">
-            <Settings className="h-4 w-4" />
-          </Button>
-        </div>
+        <Button variant="ghost" size="icon" data-testid="button-settings">
+          <Settings className="h-4 w-4" />
+        </Button>
       </header>
 
       {/* Main Content */}
       <div className="flex-1 flex overflow-hidden">
         <ResizablePanelGroup direction="horizontal">
-          {/* Sidebar */}
-          <ResizablePanel defaultSize={20} minSize={15} maxSize={30}>
+          {/* Left Sidebar - Files */}
+          <ResizablePanel defaultSize={18} minSize={12} maxSize={30}>
             <div className="h-full flex flex-col bg-card/30 border-r border-white/5">
-              {/* Sidebar Tabs */}
-              <div className="flex border-b border-white/5">
-                <button
-                  className={`flex-1 py-2 text-xs font-medium ${
-                    activeTab === "chat" ? "text-primary border-b-2 border-primary" : "text-muted-foreground"
-                  }`}
-                  onClick={() => setActiveTab("chat")}
-                >
-                  <MessageSquare className="h-4 w-4 mx-auto" />
-                </button>
-                <button
-                  className={`flex-1 py-2 text-xs font-medium ${
-                    activeTab === "files" ? "text-primary border-b-2 border-primary" : "text-muted-foreground"
-                  }`}
-                  onClick={() => setActiveTab("files")}
-                >
-                  <Folder className="h-4 w-4 mx-auto" />
-                </button>
+              <div className="flex border-b border-white/5 p-2">
+                <Folder className="h-4 w-4 mr-2 text-muted-foreground" />
+                <span className="text-xs font-medium">Files</span>
               </div>
-
               <ScrollArea className="flex-1">
-                {activeTab === "chat" && (
-                  <div className="p-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full mb-2 border-dashed border-white/10"
-                      onClick={() => createChat.mutate()}
-                      data-testid="button-new-chat"
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      New Chat
-                    </Button>
-                    {chats.map((chat) => (
-                      <div
-                        key={chat.id}
-                        className={`p-2 rounded cursor-pointer text-sm ${
-                          currentChatId === chat.id
-                            ? "bg-primary/20 text-primary"
-                            : "hover:bg-white/5"
-                        }`}
-                        onClick={() => setCurrentChatId(chat.id)}
-                        data-testid={`chat-${chat.id}`}
-                      >
-                        {chat.title}
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {activeTab === "files" && (
-                  <div className="p-2">
-                    <FileTreeNode path="" />
-                    {files.length === 0 && (
-                      <div className="text-center py-8 text-muted-foreground text-sm">
-                        No files yet
-                      </div>
-                    )}
-                  </div>
-                )}
+                <div className="p-2">
+                  <FileTreeNode path="" />
+                  {files.length === 0 && (
+                    <div className="text-center py-8 text-muted-foreground text-xs">No files</div>
+                  )}
+                </div>
               </ScrollArea>
             </div>
           </ResizablePanel>
 
           <ResizableHandle withHandle />
 
-          {/* Main Area */}
-          <ResizablePanel defaultSize={80}>
-            <ResizablePanelGroup direction="horizontal">
-              {/* Editor Panel */}
-              {selectedFile && (
-                <>
+          {/* Right Main Area */}
+          <ResizablePanel defaultSize={82}>
+            <ResizablePanelGroup direction="vertical">
+              {/* Top - Preview & Code Editor */}
+              <ResizablePanel defaultSize={40} minSize={20}>
+                <ResizablePanelGroup direction="horizontal">
+                  {/* Preview */}
                   <ResizablePanel defaultSize={50}>
-                    <div className="h-full flex flex-col">
-                      <div className="h-10 border-b border-white/5 flex items-center justify-between px-4 bg-card/30">
-                        <div className="flex items-center gap-2">
-                          <FileText className="h-4 w-4 text-blue-400" />
-                          <span className="text-sm font-mono">{selectedFile}</span>
-                          {isFileModified && (
-                            <span className="h-2 w-2 rounded-full bg-yellow-500" />
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2">
+                    <div className="h-full flex flex-col bg-card/20 border-r border-white/5">
+                      <div className="h-9 border-b border-white/5 flex items-center px-3 bg-card/50 gap-2">
+                        <Eye className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-xs font-medium">Preview</span>
+                      </div>
+                      <div className="flex-1 overflow-auto">
+                        <iframe
+                          src={`http://localhost:5173/`}
+                          className="w-full h-full border-0"
+                          title="Preview"
+                        />
+                      </div>
+                    </div>
+                  </ResizablePanel>
+
+                  <ResizableHandle withHandle />
+
+                  {/* Code Editor */}
+                  {selectedFile && (
+                    <ResizablePanel defaultSize={50}>
+                      <div className="h-full flex flex-col">
+                        <div className="h-9 border-b border-white/5 flex items-center justify-between px-3 bg-card/50">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <FileText className="h-4 w-4 text-blue-400 flex-shrink-0" />
+                            <span className="text-xs font-mono truncate">{selectedFile}</span>
+                            {isFileModified && <span className="h-2 w-2 rounded-full bg-yellow-500 flex-shrink-0" />}
+                          </div>
                           <Button
                             variant="ghost"
                             size="icon"
                             onClick={saveFile}
                             disabled={!isFileModified}
-                            data-testid="button-save-file"
+                            className="h-6 w-6"
                           >
-                            <Save className="h-4 w-4" />
+                            <Copy className="h-3 w-3" />
                           </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => {
-                              setSelectedFile(null);
-                              setFileContent("");
+                        </div>
+                        <textarea
+                          value={fileContent}
+                          onChange={(e) => {
+                            setFileContent(e.target.value);
+                            setIsFileModified(true);
+                          }}
+                          className="flex-1 font-mono text-xs p-3 bg-background/50 border-0 resize-none focus:outline-none focus:ring-0"
+                          spellCheck="false"
+                          data-testid="editor-content"
+                        />
+                      </div>
+                    </ResizablePanel>
+                  )}
+                </ResizablePanelGroup>
+              </ResizablePanel>
+
+              <ResizableHandle withHandle />
+
+              {/* Bottom - Chat + Terminal */}
+              <ResizablePanel defaultSize={60}>
+                <ResizablePanelGroup direction="horizontal">
+                  {/* Chat */}
+                  <ResizablePanel defaultSize={60}>
+                    <div className="h-full flex flex-col bg-background">
+                      <div className="h-9 border-b border-white/5 flex items-center px-3 bg-card/50">
+                        <MessageSquare className="h-4 w-4 mr-2 text-muted-foreground" />
+                        <span className="text-xs font-medium">Chat</span>
+                      </div>
+                      
+                      <ScrollArea className="flex-1 p-3">
+                        <div className="space-y-3">
+                          {messages.map(renderMessage)}
+                          <div ref={messagesEndRef} />
+                        </div>
+                      </ScrollArea>
+
+                      <div className="border-t border-white/5 p-3 bg-card/30 space-y-2">
+                        {messageQueue.length > 0 && (
+                          <div className="text-xs text-muted-foreground px-2 py-1 bg-white/5 rounded">
+                            Queue: {messageQueue.length} message{messageQueue.length !== 1 ? 's' : ''} waiting
+                          </div>
+                        )}
+                        <div className="flex gap-2">
+                          <Input
+                            ref={inputRef}
+                            value={inputMessage}
+                            onChange={(e) => setInputMessage(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" && !e.shiftKey) {
+                                e.preventDefault();
+                                sendMessage();
+                              }
                             }}
-                            data-testid="button-close-file"
+                            placeholder="Tell the AI what to build..."
+                            disabled={false}
+                            className="flex-1 h-9 bg-background/50 border-white/10 text-sm"
+                            data-testid="input-message"
+                          />
+                          <Button
+                            onClick={sendMessage}
+                            disabled={!inputMessage.trim()}
+                            size="sm"
+                            data-testid="button-send"
                           >
-                            <X className="h-4 w-4" />
+                            {isStreaming ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                           </Button>
                         </div>
                       </div>
-                      <Textarea
-                        value={fileContent}
-                        onChange={(e) => {
-                          setFileContent(e.target.value);
-                          setIsFileModified(true);
-                        }}
-                        className="flex-1 font-mono text-sm border-0 rounded-none resize-none bg-background/50 focus-visible:ring-0"
-                        placeholder="File content..."
-                        data-testid="editor-content"
-                      />
                     </div>
                   </ResizablePanel>
+
                   <ResizableHandle withHandle />
-                </>
-              )}
 
-              {/* Chat Panel */}
-              <ResizablePanel defaultSize={selectedFile ? 50 : 100}>
-                <div className="h-full flex flex-col">
-                  {/* Messages */}
-                  <ScrollArea className="flex-1 p-4">
-                    <div className="space-y-4">
-                      {messages.map(renderMessage)}
-                      
-                      {/* Streaming content */}
-                      {isStreaming && (
-                        <div className="space-y-2">
-                          {streamingContent && (
-                            <div className="flex justify-start">
-                              <div className="max-w-[80%] rounded-lg px-4 py-3 bg-card/80 border border-white/5">
-                                <div className="whitespace-pre-wrap">{streamingContent}</div>
-                              </div>
-                            </div>
-                          )}
-                          
-                          {streamingToolCalls.map((tc, i) => (
-                            <div key={i} className="px-4 py-2 text-xs font-mono bg-yellow-500/10 rounded border border-yellow-500/20">
-                              <div className="flex items-center gap-2">
-                                <Loader2 className="h-3 w-3 animate-spin text-yellow-500" />
-                                <span className="text-yellow-500">Executing: {tc.name}</span>
-                              </div>
-                            </div>
-                          ))}
-                          
-                          {streamingToolResults.map((tr, i) => (
-                            <div key={i} className="px-4 py-2 text-xs font-mono bg-green-500/10 rounded border border-green-500/20">
-                              <div className="text-green-500 mb-1">✓ {tr.name}</div>
-                              <pre className="whitespace-pre-wrap text-muted-foreground max-h-32 overflow-auto">
-                                {tr.result.slice(0, 500)}{tr.result.length > 500 && "..."}
-                              </pre>
-                            </div>
-                          ))}
-                          
-                          {!streamingContent && streamingToolCalls.length === 0 && (
-                            <div className="flex items-center gap-2 text-muted-foreground">
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                              <span>Thinking...</span>
-                            </div>
-                          )}
+                  {/* Terminal */}
+                  <ResizablePanel defaultSize={40}>
+                    <div className="h-full flex flex-col bg-background">
+                      <div className="h-9 border-b border-white/5 flex items-center justify-between px-3 bg-card/50">
+                        <div className="flex items-center gap-2">
+                          <Terminal className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-xs font-medium">Terminal</span>
                         </div>
-                      )}
+                        {isStreaming && <Loader2 className="h-3 w-3 animate-spin text-yellow-500" />}
+                      </div>
                       
-                      <div ref={messagesEndRef} />
+                      <ScrollArea className="flex-1">
+                        <div className="font-mono text-xs p-3 text-muted-foreground whitespace-pre-wrap">
+                          {terminalOutput}
+                          {thinkingMessage && <div className="flex items-center gap-2"><Loader2 className="h-3 w-3 animate-spin" />{thinkingMessage}</div>}
+                          <div ref={terminalEndRef} />
+                        </div>
+                      </ScrollArea>
                     </div>
-                  </ScrollArea>
-
-                  {/* Input */}
-                  <div className="p-4 border-t border-white/5 bg-card/30">
-                    <div className="flex gap-2">
-                      <Input
-                        value={inputMessage}
-                        onChange={(e) => setInputMessage(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" && !e.shiftKey) {
-                            e.preventDefault();
-                            sendMessage();
-                          }
-                        }}
-                        placeholder="Tell the AI what to build..."
-                        disabled={isStreaming}
-                        className="flex-1 bg-background/50 border-white/10"
-                        data-testid="input-message"
-                      />
-                      <Button
-                        onClick={sendMessage}
-                        disabled={isStreaming || !inputMessage.trim()}
-                        className="bg-primary text-primary-foreground"
-                        data-testid="button-send"
-                      >
-                        {isStreaming ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <Send className="h-4 w-4" />
-                        )}
-                      </Button>
-                    </div>
-                  </div>
-                </div>
+                  </ResizablePanel>
+                </ResizablePanelGroup>
               </ResizablePanel>
             </ResizablePanelGroup>
           </ResizablePanel>
