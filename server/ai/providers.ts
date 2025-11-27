@@ -587,6 +587,12 @@ export class GoogleProvider implements AIProviderAdapter {
   async complete(request: AICompletionRequest): Promise<AICompletionResponse> {
     const { systemInstruction, contents } = this.formatMessages(request.messages);
 
+    // Prepend system instruction to first user message if present
+    if (systemInstruction && contents.length > 0 && contents[0].role === "user") {
+      const systemText = systemInstruction.parts[0].text;
+      contents[0].parts[0].text = systemText + "\n\n" + contents[0].parts[0].text;
+    }
+
     const body: any = {
       contents,
       generationConfig: {
@@ -595,10 +601,7 @@ export class GoogleProvider implements AIProviderAdapter {
       },
     };
 
-    if (systemInstruction) {
-      body.systemInstruction = systemInstruction;
-    }
-
+    // Add tools as function declarations if present
     if (request.tools && request.tools.length > 0) {
       body.tools = this.formatTools(request.tools);
     }
@@ -658,6 +661,12 @@ export class GoogleProvider implements AIProviderAdapter {
   async *streamComplete(request: AICompletionRequest): AsyncGenerator<AIStreamChunk> {
     const { systemInstruction, contents } = this.formatMessages(request.messages);
 
+    // Prepend system instruction to first user message if present
+    if (systemInstruction && contents.length > 0 && contents[0].role === "user") {
+      const systemText = systemInstruction.parts[0].text;
+      contents[0].parts[0].text = systemText + "\n\n" + contents[0].parts[0].text;
+    }
+
     const body: any = {
       contents,
       generationConfig: {
@@ -666,10 +675,7 @@ export class GoogleProvider implements AIProviderAdapter {
       },
     };
 
-    if (systemInstruction) {
-      body.systemInstruction = systemInstruction;
-    }
-
+    // Add tools as function declarations if present
     if (request.tools && request.tools.length > 0) {
       body.tools = this.formatTools(request.tools);
     }
