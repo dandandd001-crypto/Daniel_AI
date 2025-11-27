@@ -26,8 +26,8 @@ NC='\033[0m' # No Color
 DOMAIN="${1:-app.example.com}"
 EMAIL="${2:-admin@example.com}"
 APP_NAME="daniel-ai"
-APP_DIR="/home/ubuntu/apps/${APP_NAME}"
-APP_USER="app"
+APP_DIR="/var/www/danielai/Daniel_AI"
+APP_USER="ubuntu"
 APP_PORT="5000"
 DB_NAME="${APP_NAME}_db"
 DB_USER="${APP_NAME}_user"
@@ -76,8 +76,10 @@ sudo chown "$APP_USER:$APP_USER" "$APP_DIR"
 # Setup database
 echo -e "${YELLOW}🗄️  Setting up PostgreSQL database...${NC}"
 sudo -u postgres psql <<EOF
-CREATE DATABASE IF NOT EXISTS "$DB_NAME";
-CREATE USER IF NOT EXISTS "$DB_USER" WITH PASSWORD 'change_this_password_immediately';
+DROP DATABASE IF EXISTS "$DB_NAME";
+DROP USER IF EXISTS "$DB_USER";
+CREATE DATABASE "$DB_NAME";
+CREATE USER "$DB_USER" WITH PASSWORD 'change_this_password_immediately';
 ALTER ROLE "$DB_USER" SET client_encoding TO 'utf8';
 ALTER ROLE "$DB_USER" SET default_transaction_isolation TO 'read committed';
 ALTER ROLE "$DB_USER" SET default_transaction_deferrable TO on;
