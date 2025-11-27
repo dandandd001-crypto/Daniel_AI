@@ -327,6 +327,170 @@ export async function registerRoutes(
     }
   });
 
+  // ============ GITHUB OPERATIONS ============
+
+  // Clone GitHub repo into project
+  app.post("/api/projects/:projectId/github/clone", async (req, res) => {
+    try {
+      const { repoUrl } = req.body;
+      if (!repoUrl) {
+        return res.status(400).json({ error: "repoUrl required" });
+      }
+      
+      const project = await storage.getProject(req.params.projectId);
+      if (!project) {
+        return res.status(404).json({ error: "Project not found" });
+      }
+
+      const { execSync } = require("child_process");
+      const result = execSync(`cd ${project.directoryPath} && git clone ${repoUrl} .`, {
+        encoding: "utf-8",
+        maxBuffer: 10 * 1024 * 1024,
+      });
+      
+      res.json({ success: true, message: "Repository cloned", output: result });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Initialize git repo
+  app.post("/api/projects/:projectId/github/init", async (req, res) => {
+    try {
+      const project = await storage.getProject(req.params.projectId);
+      if (!project) {
+        return res.status(404).json({ error: "Project not found" });
+      }
+
+      const { execSync } = require("child_process");
+      execSync(`cd ${project.directoryPath} && git init && git config user.email "ai@danieldai.com" && git config user.name "DanielAI"`, {
+        encoding: "utf-8",
+      });
+      
+      res.json({ success: true, message: "Git repository initialized" });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get git status
+  app.get("/api/projects/:projectId/github/status", async (req, res) => {
+    try {
+      const project = await storage.getProject(req.params.projectId);
+      if (!project) {
+        return res.status(404).json({ error: "Project not found" });
+      }
+
+      const { execSync } = require("child_process");
+      const status = execSync(`cd ${project.directoryPath} && git status --short`, {
+        encoding: "utf-8",
+      });
+      
+      res.json({ status });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ============ DEPLOYMENT ============
+
+  // Deploy project to Ubuntu/production
+  app.post("/api/projects/:projectId/deploy", async (req, res) => {
+    try {
+      const { target, domain } = req.body; // target: ubuntu, domain: example.com
+      if (!target || !domain) {
+        return res.status(400).json({ error: "target and domain required" });
+      }
+      
+      const project = await storage.getProject(req.params.projectId);
+      if (!project) {
+        return res.status(404).json({ error: "Project not found" });
+      }
+
+      // Generate deployment script for Ubuntu
+      const deployScript = `#!/bin/bash
+set -e
+
+# DanielAI Deployment Script for ${project.name}
+PROJECT_DIR="${project.directoryPath}"
+DOMAIN="${domain}"
+
+echo "Deploying ${project.name} to Ubuntu server..."
+
+# Check for Node.js
+if ! command -v node &> /dev/null; then
+  echo "Installing Node.js..."
+  curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+  sudo apt-get install -y nodejs
+fi
+
+# Check for PostgreSQL
+if ! command -v psql &> /dev/null; then
+  echo "Installing PostgreSQL..."
+  sudo apt-get update
+  sudo apt-get install -y postgresql postgresql-contrib
+fi
+
+# Build project
+cd $PROJECT_DIR
+npm install
+npm run build
+
+# Install PM2 globally
+sudo npm install -g pm2
+
+# Start with PM2
+pm2 delete "${project.name}" || true
+pm2 start npm --name "${project.name}" -- start
+
+# Setup Nginx reverse proxy
+sudo apt-get install -y nginx
+
+# Create Nginx config
+sudo tee /etc/nginx/sites-available/$DOMAIN > /dev/null <<EOF
+server {
+    listen 80;
+    server_name $DOMAIN;
+
+    location / {
+        proxy_pass http://localhost:5000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \\$http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host \\$host;
+        proxy_cache_bypass \\$http_upgrade;
+    }
+}
+EOF
+
+# Enable site
+sudo ln -sf /etc/nginx/sites-available/$DOMAIN /etc/nginx/sites-enabled/
+sudo nginx -t
+sudo systemctl restart nginx
+
+# Setup SSL with Let's Encrypt
+sudo apt-get install -y certbot python3-certbot-nginx
+sudo certbot --nginx -d $DOMAIN --non-interactive --agree-tos -m admin@$DOMAIN
+
+echo "✓ Deployment complete!"
+echo "Application running at: https://$DOMAIN"`;
+
+      res.json({
+        success: true,
+        message: "Deployment script generated",
+        script: deployScript,
+        instructions: [
+          "1. Copy the script to your Ubuntu server",
+          "2. Run: chmod +x deploy.sh && ./deploy.sh",
+          "3. Your app will be live at https://" + domain,
+          "Note: You'll need sudo access and a domain pointing to your server"
+        ]
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // ============ AI MODELS ============
 
   // Get available models
