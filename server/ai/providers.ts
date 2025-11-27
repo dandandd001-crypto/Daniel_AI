@@ -522,30 +522,30 @@ export class AnthropicProvider implements AIProviderAdapter {
 export class GoogleProvider implements AIProviderAdapter {
   private apiKey: string;
   private model: string;
-  private baseUrl = "https://generativelanguage.googleapis.com/v1";
+  private baseUrl = "https://generativelanguage.googleapis.com/v1beta";
 
   constructor(apiKey: string, model: string) {
     this.apiKey = apiKey;
     this.model = model;
   }
 
-  private formatMessages(messages: AIMessage[]): { systemInstruction?: any; contents: any[] } {
-    let systemInstruction: any;
+  private formatMessages(messages: AIMessage[]): { system?: string; contents: any[] } {
+    let systemPrompt: string | undefined;
     const contents: any[] = [];
 
     for (const msg of messages) {
       if (msg.role === "system") {
-        systemInstruction = { parts: [{ text: msg.content }] };
+        systemPrompt = (systemPrompt || "") + msg.content + "\n";
         continue;
       }
 
       if (msg.role === "tool" && msg.toolResults) {
         contents.push({
-          role: "function",
+          role: "user",
           parts: msg.toolResults.map(tr => ({
             functionResponse: {
               name: tr.toolCallId,
-              response: { result: tr.result },
+              response: { result: tr.result, isError: tr.isError },
             },
           })),
         });
@@ -571,178 +571,188 @@ export class GoogleProvider implements AIProviderAdapter {
       });
     }
 
-    return { systemInstruction, contents };
+    return { system: systemPrompt?.trim(), contents };
   }
 
-  private formatTools(tools: ToolDefinition[]): any[] {
-    return [{
+  private formatTools(tools: ToolDefinition[]): any {
+    return {
       functionDeclarations: tools.map(tool => ({
         name: tool.name,
         description: tool.description,
         parameters: tool.parameters,
       })),
-    }];
+    };
   }
 
   async complete(request: AICompletionRequest): Promise<AICompletionResponse> {
-    const { systemInstruction, contents } = this.formatMessages(request.messages);
+    try {
+      const { system, contents } = this.formatMessages(request.messages);
 
-    // Prepend system instruction to first user message if present
-    if (systemInstruction && contents.length > 0 && contents[0].role === "user") {
-      const systemText = systemInstruction.parts[0].text;
-      contents[0].parts[0].text = systemText + "\n\n" + contents[0].parts[0].text;
-    }
+      const body: any = {
+        contents,
+        generationConfig: {
+          maxOutputTokens: request.maxTokens || 4096,
+          temperature: request.temperature ?? 0.7,
+        },
+      };
 
-    const body: any = {
-      contents,
-      generationConfig: {
-        maxOutputTokens: request.maxTokens || 4096,
-        temperature: request.temperature ?? 0.7,
-      },
-    };
-
-    // Add tools as function declarations if present
-    if (request.tools && request.tools.length > 0) {
-      body.tools = this.formatTools(request.tools);
-    }
-
-    const url = `${this.baseUrl}/models/${this.model}:generateContent?key=${this.apiKey}`;
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(body),
-    });
-
-    if (!response.ok) {
-      const error = await response.text();
-      throw new Error(`Google API error: ${response.status} - ${error}`);
-    }
-
-    const data = await response.json();
-    const candidate = data.candidates?.[0];
-    
-    if (!candidate) {
-      throw new Error("No response from Google API");
-    }
-
-    let content = "";
-    const toolCalls: ToolCall[] = [];
-
-    for (const part of candidate.content?.parts || []) {
-      if (part.text) {
-        content += part.text;
-      } else if (part.functionCall) {
-        toolCalls.push({
-          id: part.functionCall.name,
-          name: part.functionCall.name,
-          arguments: part.functionCall.args,
-        });
+      // Add system instruction if present (using systemInstruction field for v1beta API)
+      if (system) {
+        body.systemInstruction = {
+          parts: [{ text: system }],
+        };
       }
+
+      // Add tools if present
+      if (request.tools && request.tools.length > 0) {
+        body.tools = [this.formatTools(request.tools)];
+      }
+
+      const url = `${this.baseUrl}/models/${this.model}:generateContent?key=${this.apiKey}`;
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+      });
+
+      if (!response.ok) {
+        const error = await response.text();
+        throw new Error(`Google API error: ${response.status} - ${error}`);
+      }
+
+      const data = await response.json();
+      const candidate = data.candidates?.[0];
+      
+      if (!candidate) {
+        throw new Error("No response from Google API");
+      }
+
+      let content = "";
+      const toolCalls: ToolCall[] = [];
+
+      for (const part of candidate.content?.parts || []) {
+        if (part.text) {
+          content += part.text;
+        } else if (part.functionCall) {
+          toolCalls.push({
+            id: `call_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            name: part.functionCall.name,
+            arguments: part.functionCall.args || {},
+          });
+        }
+      }
+
+      const finishReason = candidate.finishReason === "STOP" ? "stop" :
+                           candidate.finishReason === "MAX_TOKENS" ? "length" :
+                           toolCalls.length > 0 ? "tool_calls" : "stop";
+
+      return {
+        content,
+        toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
+        finishReason,
+        usage: data.usageMetadata ? {
+          promptTokens: data.usageMetadata.promptTokenCount,
+          completionTokens: data.usageMetadata.candidatesTokenCount,
+          totalTokens: data.usageMetadata.totalTokenCount,
+        } : undefined,
+      };
+    } catch (error: any) {
+      throw new Error(`Google API error: ${error.message}`);
     }
-
-    const finishReason = candidate.finishReason === "STOP" ? "stop" :
-                         candidate.finishReason === "MAX_TOKENS" ? "length" :
-                         toolCalls.length > 0 ? "tool_calls" : "stop";
-
-    return {
-      content,
-      toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
-      finishReason,
-      usage: data.usageMetadata ? {
-        promptTokens: data.usageMetadata.promptTokenCount,
-        completionTokens: data.usageMetadata.candidatesTokenCount,
-        totalTokens: data.usageMetadata.totalTokenCount,
-      } : undefined,
-    };
   }
 
   async *streamComplete(request: AICompletionRequest): AsyncGenerator<AIStreamChunk> {
-    const { systemInstruction, contents } = this.formatMessages(request.messages);
+    try {
+      const { system, contents } = this.formatMessages(request.messages);
 
-    // Prepend system instruction to first user message if present
-    if (systemInstruction && contents.length > 0 && contents[0].role === "user") {
-      const systemText = systemInstruction.parts[0].text;
-      contents[0].parts[0].text = systemText + "\n\n" + contents[0].parts[0].text;
-    }
+      const body: any = {
+        contents,
+        generationConfig: {
+          maxOutputTokens: request.maxTokens || 4096,
+          temperature: request.temperature ?? 0.7,
+        },
+      };
 
-    const body: any = {
-      contents,
-      generationConfig: {
-        maxOutputTokens: request.maxTokens || 4096,
-        temperature: request.temperature ?? 0.7,
-      },
-    };
+      // Add system instruction if present
+      if (system) {
+        body.systemInstruction = {
+          parts: [{ text: system }],
+        };
+      }
 
-    // Add tools as function declarations if present
-    if (request.tools && request.tools.length > 0) {
-      body.tools = this.formatTools(request.tools);
-    }
+      // Add tools if present
+      if (request.tools && request.tools.length > 0) {
+        body.tools = [this.formatTools(request.tools)];
+      }
 
-    const url = `${this.baseUrl}/models/${this.model}:streamGenerateContent?key=${this.apiKey}&alt=sse`;
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(body),
-    });
+      const url = `${this.baseUrl}/models/${this.model}:streamGenerateContent?key=${this.apiKey}&alt=sse`;
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+      });
 
-    if (!response.ok) {
-      const error = await response.text();
-      yield { type: "error", error: `Google API error: ${response.status} - ${error}` };
-      return;
-    }
+      if (!response.ok) {
+        const error = await response.text();
+        yield { type: "error", error: `Google API error: ${response.status} - ${error}` };
+        return;
+      }
 
-    const reader = response.body?.getReader();
-    if (!reader) {
-      yield { type: "error", error: "No response body" };
-      return;
-    }
+      const reader = response.body?.getReader();
+      if (!reader) {
+        yield { type: "error", error: "No response body" };
+        return;
+      }
 
-    const decoder = new TextDecoder();
-    let buffer = "";
+      const decoder = new TextDecoder();
+      let buffer = "";
 
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
 
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split("\n");
-      buffer = lines.pop() || "";
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
 
-      for (const line of lines) {
-        if (line.startsWith("data: ")) {
-          const data = line.slice(6);
-          try {
-            const parsed = JSON.parse(data);
-            const candidate = parsed.candidates?.[0];
-            
-            if (candidate?.content?.parts) {
-              for (const part of candidate.content.parts) {
-                if (part.text) {
-                  yield { type: "content", content: part.text };
-                } else if (part.functionCall) {
-                  yield {
-                    type: "tool_call",
-                    toolCall: {
-                      id: part.functionCall.name,
-                      name: part.functionCall.name,
-                      arguments: part.functionCall.args,
-                    },
-                  };
+        for (const line of lines) {
+          if (line.startsWith("data: ")) {
+            const data = line.slice(6);
+            try {
+              const parsed = JSON.parse(data);
+              const candidate = parsed.candidates?.[0];
+              
+              if (candidate?.content?.parts) {
+                for (const part of candidate.content.parts) {
+                  if (part.text) {
+                    yield { type: "content", content: part.text };
+                  } else if (part.functionCall) {
+                    yield {
+                      type: "tool_call",
+                      toolCall: {
+                        id: `call_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                        name: part.functionCall.name,
+                        arguments: part.functionCall.args || {},
+                      },
+                    };
+                  }
                 }
               }
+            } catch (e) {
+              // Ignore parse errors
             }
-          } catch (e) {
-            // Ignore parse errors
           }
         }
       }
-    }
 
-    yield { type: "done" };
+      yield { type: "done" };
+    } catch (error: any) {
+      yield { type: "error", error: `Google streaming error: ${error.message}` };
+    }
   }
 }
 
