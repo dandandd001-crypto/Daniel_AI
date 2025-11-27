@@ -230,6 +230,37 @@ export async function registerRoutes(
     }
   });
 
+  // Upload file (multipart)
+  app.post("/api/projects/:projectId/files/upload", async (req, res) => {
+    try {
+      const { file, filename } = req.body;
+      if (!file || !filename) {
+        return res.status(400).json({ error: "File and filename required" });
+      }
+
+      const project = await storage.getProject(req.params.projectId);
+      if (!project) {
+        return res.status(404).json({ error: "Project not found" });
+      }
+
+      const fs = await import("fs/promises");
+      const path = await import("path");
+      const fullPath = path.join(project.directoryPath, filename);
+
+      // Security check
+      if (!fullPath.startsWith(project.directoryPath)) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+
+      await fs.mkdir(path.dirname(fullPath), { recursive: true });
+      await fs.writeFile(fullPath, Buffer.from(file, "base64"));
+      await storage.syncProjectFiles(req.params.projectId);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // ============ ENVIRONMENT VARIABLES ============
 
   // Get env vars for project

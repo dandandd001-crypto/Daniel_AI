@@ -469,8 +469,43 @@ export default function Workspace() {
                     </Button>
                   </div>
 
-                  {/* Chats List */}
-                  <div className="border-b border-white/5 p-1.5">
+                  {/* File Upload & New Chat */}
+                  <div className="border-b border-white/5 p-1.5 space-y-1">
+                    <input
+                      type="file"
+                      id="file-upload"
+                      className="hidden"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const reader = new FileReader();
+                          reader.onload = async (event) => {
+                            const base64 = (event.target?.result as string).split(",")[1];
+                            try {
+                              await fetch(`/api/projects/${projectId}/files/upload`, {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ file: base64, filename: file.name }),
+                              });
+                              refetchFiles();
+                            } catch (error) {
+                              console.error("Upload failed:", error);
+                            }
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      }}
+                    />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full h-7 text-xs border-dashed border-white/10"
+                      onClick={() => document.getElementById("file-upload")?.click()}
+                      data-testid="button-upload-file"
+                    >
+                      <Plus className="h-3 w-3 mr-1" />
+                      Upload
+                    </Button>
                     <Button
                       variant="outline"
                       size="sm"
@@ -479,7 +514,7 @@ export default function Workspace() {
                       data-testid="button-new-chat"
                     >
                       <Plus className="h-3 w-3 mr-1" />
-                      New
+                      Chat
                     </Button>
                   </div>
 
