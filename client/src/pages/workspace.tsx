@@ -139,21 +139,24 @@ export default function Workspace() {
     },
   });
 
-  const createChat = useMutation({
-    mutationFn: async () => {
-      const res = await fetch(`/api/projects/${projectId}/chats`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: "New Chat" }),
-      });
-      if (!res.ok) throw new Error("Failed to create chat");
-      return res.json();
-    },
-    onSuccess: (chat) => {
-      queryClient.invalidateQueries({ queryKey: ["chats", projectId] });
-      setCurrentChatId(chat.id);
-    },
-  });
+  const downloadFiles = async () => {
+    if (!projectId) return;
+    try {
+      const res = await fetch(`/api/projects/${projectId}/download`);
+      if (!res.ok) throw new Error("Download failed");
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${project?.name || "project"}-${Date.now()}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error("Download failed:", error);
+    }
+  };
 
   useEffect(() => {
     if (chats.length > 0 && !currentChatId) {
@@ -373,9 +376,9 @@ export default function Workspace() {
       <div className="flex-1 flex overflow-hidden">
         <ResizablePanelGroup direction="vertical">
           {/* Chat Panel */}
-          {showChat && (
-            <>
-              <ResizablePanel defaultSize={33} minSize={20}>
+          <ResizablePanel defaultSize={33} minSize={20} style={{ display: showChat ? "flex" : "none" }}>
+            {showChat && (
+              <>
                 <div className="h-full flex flex-col bg-background">
                   <div className="h-6 border-b border-white/5 px-2 flex items-center text-xs font-semibold text-muted-foreground bg-card/30">
                     Chat
@@ -416,16 +419,6 @@ export default function Workspace() {
                       <Plus className="h-2.5 w-2.5 mr-1" />
                       Upload
                     </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full h-6 text-xs border-dashed border-white/10"
-                      onClick={() => createChat.mutate()}
-                      data-testid="button-new-chat"
-                    >
-                      <Plus className="h-2.5 w-2.5 mr-1" />
-                      New Chat
-                    </Button>
                   </div>
                   <ScrollArea className="flex-1">
                     <div className="p-2">
@@ -461,15 +454,15 @@ export default function Workspace() {
                     </div>
                   </div>
                 </div>
-              </ResizablePanel>
-              <ResizableHandle withHandle />
-            </>
-          )}
+              </>
+            )}
+          </ResizablePanel>
+          {(showChat || showConsole || showPreview || showFiles) && showChat && (showConsole || showPreview || showFiles) && <ResizableHandle withHandle />}
 
           {/* Console Panel */}
-          {showConsole && (
-            <>
-              <ResizablePanel defaultSize={33} minSize={20}>
+          <ResizablePanel defaultSize={33} minSize={20} style={{ display: showConsole ? "flex" : "none" }}>
+            {showConsole && (
+              <>
                 <div className="h-full flex flex-col bg-background">
                   <div className="h-6 border-b border-white/5 px-2 flex items-center justify-between text-xs font-semibold text-muted-foreground bg-card/30">
                     <span>Console</span>
@@ -490,15 +483,15 @@ export default function Workspace() {
                     </div>
                   </ScrollArea>
                 </div>
-              </ResizablePanel>
-              <ResizableHandle withHandle />
-            </>
-          )}
+              </>
+            )}
+          </ResizablePanel>
+          {(showConsole || showPreview || showFiles) && showConsole && (showPreview || showFiles) && <ResizableHandle withHandle />}
 
           {/* Preview Panel */}
-          {showPreview && (
-            <>
-              <ResizablePanel defaultSize={33} minSize={20}>
+          <ResizablePanel defaultSize={33} minSize={20} style={{ display: showPreview ? "flex" : "none" }}>
+            {showPreview && (
+              <>
                 <div className="h-full flex flex-col bg-background">
                   <div className="h-6 border-b border-white/5 px-2 flex items-center text-xs font-semibold text-muted-foreground bg-card/30">
                     Preview
@@ -510,17 +503,28 @@ export default function Workspace() {
                     sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-modals"
                   />
                 </div>
-              </ResizablePanel>
-              <ResizableHandle withHandle />
-            </>
-          )}
+              </>
+            )}
+          </ResizablePanel>
+          {showPreview && showFiles && <ResizableHandle withHandle />}
 
           {/* Files Panel */}
-          {showFiles && (
-            <ResizablePanel defaultSize={33} minSize={20}>
+          <ResizablePanel defaultSize={33} minSize={20} style={{ display: showFiles ? "flex" : "none" }}>
+            {showFiles && (
+              <>
               <div className="h-full flex flex-col bg-card/30">
-                <div className="h-6 border-b border-white/5 px-2 flex items-center text-xs font-semibold text-muted-foreground bg-card/50">
-                  Files
+                <div className="h-6 border-b border-white/5 px-2 flex items-center justify-between text-xs font-semibold text-muted-foreground bg-card/50">
+                  <span>Files</span>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-4 w-4"
+                    onClick={downloadFiles}
+                    title="Download all files as ZIP"
+                    data-testid="button-download-files"
+                  >
+                    <FileText className="h-2.5 w-2.5" />
+                  </Button>
                 </div>
                 <ScrollArea className="flex-1">
                   <div className="p-1.5">
@@ -531,8 +535,8 @@ export default function Workspace() {
                   </div>
                 </ScrollArea>
               </div>
-            </ResizablePanel>
-          )}
+            )}
+          </ResizablePanel>
         </ResizablePanelGroup>
       </div>
     </div>
