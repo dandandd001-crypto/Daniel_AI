@@ -100,6 +100,14 @@ export class DatabaseStorage implements IStorage {
     return project;
   }
 
+  async updateProjectApiKey(id: string, apiKey: string): Promise<Project | undefined> {
+    const [project] = await db.update(projects)
+      .set({ apiKey, updatedAt: new Date() })
+      .where(eq(projects.id, id))
+      .returning();
+    return project;
+  }
+
   async deleteProject(id: string): Promise<boolean> {
     const project = await this.getProject(id);
     if (project) {

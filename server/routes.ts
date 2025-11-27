@@ -72,6 +72,23 @@ export async function registerRoutes(
     }
   });
 
+  // Update project API key
+  app.patch("/api/projects/:id/api-key", async (req, res) => {
+    try {
+      const { apiKey } = req.body;
+      if (!apiKey) {
+        return res.status(400).json({ error: "API key is required" });
+      }
+      const project = await storage.updateProjectApiKey(req.params.id, apiKey);
+      if (!project) {
+        return res.status(404).json({ error: "Project not found" });
+      }
+      res.json({ ...project, apiKey: "***" });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Delete project
   app.delete("/api/projects/:id", async (req, res) => {
     try {

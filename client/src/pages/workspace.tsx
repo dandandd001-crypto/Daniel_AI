@@ -3,13 +3,20 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useParams, useLocation } from "wouter";
 import {
   ChevronLeft, Send, Folder, FileText, Plus, MessageSquare, Settings, 
-  Loader2, FolderOpen, ChevronDown, X, ChevronRight
+  Loader2, FolderOpen, ChevronDown, X, ChevronRight, Eye
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 interface Project {
   id: string;
@@ -65,11 +72,13 @@ export default function Workspace() {
   const [inputMessage, setInputMessage] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
   const [chatOpen, setChatOpen] = useState(true);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [newApiKey, setNewApiKey] = useState("");
   
   const wsRef = useRef<WebSocket | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const { data: project } = useQuery<Project>({
+  const { data: project, refetch: refetchProject } = useQuery<Project>({
     queryKey: ["project", projectId],
     queryFn: async () => {
       const res = await fetch(`/api/projects/${projectId}`);
@@ -109,6 +118,23 @@ export default function Workspace() {
     enabled: !!projectId,
   });
 
+  const updateApiKeyMutation = useMutation({
+    mutationFn: async (apiKey: string) => {
+      const res = await fetch(`/api/projects/${projectId}/api-key`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ apiKey }),
+      });
+      if (!res.ok) throw new Error("Failed to update API key");
+      return res.json();
+    },
+    onSuccess: () => {
+      refetchProject();
+      setSettingsOpen(false);
+      setNewApiKey("");
+    },
+  });
+
   const createChat = useMutation({
     mutationFn: async () => {
       const res = await fetch(`/api/projects/${projectId}/chats`, {
@@ -131,7 +157,6 @@ export default function Workspace() {
     }
   }, [chats, currentChatId]);
 
-  // WebSocket connection
   useEffect(() => {
     if (!projectId || !currentChatId) return;
 
@@ -156,10 +181,6 @@ export default function Workspace() {
           setIsStreaming(false);
           break;
       }
-    };
-
-    ws.onerror = (error) => {
-      console.error("WebSocket error:", error);
     };
 
     return () => {
@@ -292,10 +313,47 @@ export default function Workspace() {
           <h1 className="font-semibold text-xs truncate">{project?.name || "Loading..."}</h1>
           <span className="text-xs text-muted-foreground px-1.5 py-0.5 bg-white/5 rounded">{project?.model}</span>
         </div>
-        <Button variant="ghost" size="icon" className="h-7 w-7" data-testid="button-settings">
-          <Settings className="h-3 w-3" />
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          className="h-7 w-7" 
+          data-testid="button-settings"
+          onClick={() => setSettingsOpen(true)}
+        >
+          <Settings className="h-3.5 w-3.5" />
         </Button>
       </header>
+
+      {/* Settings Modal */}
+      <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Project Settings</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium">API Key</label>
+              <Input
+                type="password"
+                value={newApiKey}
+                onChange={(e) => setNewApiKey(e.target.value)}
+                placeholder="Enter new API key"
+                className="mt-1"
+              />
+              <p className="text-xs text-muted-foreground mt-1">Update your {project?.provider} API key</p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSettingsOpen(false)}>Cancel</Button>
+            <Button 
+              onClick={() => updateApiKeyMutation.mutate(newApiKey)}
+              disabled={!newApiKey.trim() || updateApiKeyMutation.isPending}
+            >
+              {updateApiKeyMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Update"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Main Content */}
       <div className="flex-1 flex overflow-hidden">
@@ -331,16 +389,31 @@ export default function Workspace() {
                       <span className="font-mono truncate">{selectedFile}</span>
                       {isFileModified && <span className="h-1.5 w-1.5 rounded-full bg-yellow-500 flex-shrink-0" />}
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={saveFile}
-                      disabled={!isFileModified}
-                      className="h-6 w-6"
-                      title="Save file"
-                    >
-                      <Plus className="h-3 w-3" />
-                    </Button>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={saveFile}
+                        disabled={!isFileModified}
+                        className="h-6 w-6"
+                        title="Save file (Ctrl+S)"
+                      >
+                        <Plus className="h-3 w-3" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => {
+                          setSelectedFile(null);
+                          setFileContent("");
+                        }}
+                        className="h-6 w-6"
+                        title="Close file"
+                        data-testid="button-close-file"
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
                   </div>
                   <textarea
                     value={fileContent}
@@ -362,14 +435,15 @@ export default function Workspace() {
           {/* Preview */}
           <ResizablePanel defaultSize={selectedFile ? 56 : 84}>
             <div className="h-full flex flex-col bg-background">
-              <div className="h-8 border-b border-white/5 px-3 flex items-center text-xs font-semibold text-muted-foreground bg-card/50">
+              <div className="h-8 border-b border-white/5 px-3 flex items-center text-xs font-semibold text-muted-foreground bg-card/50 gap-2">
+                <Eye className="h-3 w-3" />
                 Preview
               </div>
               <iframe
-                src="http://localhost:5000/"
+                src="http://localhost:8000/"
                 className="flex-1 border-0 bg-white"
                 title="App Preview"
-                sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
+                sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-modals"
               />
             </div>
           </ResizablePanel>
