@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useParams, useLocation } from "wouter";
 import {
   ChevronLeft, Send, Folder, FileText, Plus, MessageSquare, Settings, 
-  Loader2, FolderOpen, ChevronDown, X, ChevronRight, Eye
+  Loader2, FolderOpen, ChevronDown, X
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -65,15 +65,12 @@ export default function Workspace() {
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
   
-  const [selectedFile, setSelectedFile] = useState<string | null>(null);
-  const [fileContent, setFileContent] = useState<string>("");
-  const [isFileModified, setIsFileModified] = useState(false);
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
   const [inputMessage, setInputMessage] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
-  const [chatOpen, setChatOpen] = useState(true);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [newApiKey, setNewApiKey] = useState("");
+  const [showFilesSidebar, setShowFilesSidebar] = useState(false);
   
   const wsRef = useRef<WebSocket | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -205,36 +202,6 @@ export default function Workspace() {
     }));
   }, [inputMessage]);
 
-  const loadFile = async (path: string) => {
-    try {
-      const res = await fetch(`/api/projects/${projectId}/files/content?path=${encodeURIComponent(path)}`);
-      if (!res.ok) throw new Error("Failed to load file");
-      const data = await res.json();
-      setSelectedFile(path);
-      setFileContent(data.content);
-      setIsFileModified(false);
-    } catch (error) {
-      console.error("Error loading file:", error);
-    }
-  };
-
-  const saveFile = async () => {
-    if (!selectedFile) return;
-    
-    try {
-      const res = await fetch(`/api/projects/${projectId}/files/content`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ path: selectedFile, content: fileContent }),
-      });
-      if (!res.ok) throw new Error("Failed to save file");
-      setIsFileModified(false);
-      refetchFiles();
-    } catch (error) {
-      console.error("Error saving file:", error);
-    }
-  };
-
   const buildFileTree = (files: FileNode[]) => {
     const tree: Record<string, FileNode[]> = { "": [] };
     for (const file of files) {
@@ -275,10 +242,7 @@ export default function Workspace() {
         {filesInDir.map((file) => (
           <div
             key={file.id}
-            className={`flex items-center gap-2 px-2 py-1 hover:bg-white/5 rounded text-xs cursor-pointer ${
-              selectedFile === file.path ? "bg-primary/20 text-primary" : ""
-            }`}
-            onClick={() => loadFile(file.path)}
+            className={`flex items-center gap-2 px-2 py-1 hover:bg-white/5 rounded text-xs cursor-pointer`}
             data-testid={`file-${file.path}`}
           >
             <FileText className="h-3 w-3 text-blue-400" />
@@ -358,102 +322,12 @@ export default function Workspace() {
       {/* Main Content */}
       <div className="flex-1 flex overflow-hidden">
         <ResizablePanelGroup direction="horizontal">
-          {/* Files Sidebar */}
-          <ResizablePanel defaultSize={16} minSize={12} maxSize={25}>
-            <div className="h-full flex flex-col bg-card/30 border-r border-white/5">
-              <div className="flex border-b border-white/5 p-2 items-center gap-2">
-                <Folder className="h-3.5 w-3.5 text-muted-foreground" />
-                <span className="text-xs font-semibold">Files</span>
-              </div>
-              <ScrollArea className="flex-1">
-                <div className="p-1.5">
-                  <FileTreeNode path="" />
-                  {files.length === 0 && (
-                    <div className="text-center py-6 text-muted-foreground text-xs">No files</div>
-                  )}
-                </div>
-              </ScrollArea>
-            </div>
-          </ResizablePanel>
-
-          <ResizableHandle withHandle />
-
-          {/* Code Editor */}
-          {selectedFile && (
-            <>
-              <ResizablePanel defaultSize={28} minSize={20}>
+          {/* Chat & Console */}
+          <ResizablePanel defaultSize={100}>
+            <ResizablePanelGroup direction="vertical">
+              {/* Chat */}
+              <ResizablePanel defaultSize={60} minSize={40}>
                 <div className="h-full flex flex-col bg-background">
-                  <div className="h-8 border-b border-white/5 flex items-center justify-between px-3 bg-card/50 text-xs">
-                    <div className="flex items-center gap-1.5 min-w-0">
-                      <FileText className="h-3 w-3 text-blue-400 flex-shrink-0" />
-                      <span className="font-mono truncate">{selectedFile}</span>
-                      {isFileModified && <span className="h-1.5 w-1.5 rounded-full bg-yellow-500 flex-shrink-0" />}
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={saveFile}
-                        disabled={!isFileModified}
-                        className="h-6 w-6"
-                        title="Save file (Ctrl+S)"
-                      >
-                        <Plus className="h-3 w-3" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => {
-                          setSelectedFile(null);
-                          setFileContent("");
-                        }}
-                        className="h-6 w-6"
-                        title="Close file"
-                        data-testid="button-close-file"
-                      >
-                        <X className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  </div>
-                  <textarea
-                    value={fileContent}
-                    onChange={(e) => {
-                      setFileContent(e.target.value);
-                      setIsFileModified(true);
-                    }}
-                    className="flex-1 font-mono text-xs p-2 bg-background/50 border-0 resize-none focus:outline-none focus:ring-0 leading-relaxed"
-                    spellCheck="false"
-                    data-testid="editor-content"
-                  />
-                </div>
-              </ResizablePanel>
-
-              <ResizableHandle withHandle />
-            </>
-          )}
-
-          {/* Preview */}
-          <ResizablePanel defaultSize={selectedFile ? 56 : 84}>
-            <div className="h-full flex flex-col bg-background">
-              <div className="h-8 border-b border-white/5 px-3 flex items-center text-xs font-semibold text-muted-foreground bg-card/50 gap-2">
-                <Eye className="h-3 w-3" />
-                Preview
-              </div>
-              <iframe
-                src="http://localhost:8000/"
-                className="flex-1 border-0 bg-white"
-                title="App Preview"
-                sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-modals"
-              />
-            </div>
-          </ResizablePanel>
-
-          {/* Chat Sidebar */}
-          {chatOpen && (
-            <>
-              <ResizableHandle withHandle />
-              <ResizablePanel defaultSize={18} minSize={15} maxSize={30}>
-                <div className="h-full flex flex-col bg-card/30 border-l border-white/5">
                   <div className="h-8 border-b border-white/5 flex items-center justify-between px-3 bg-card/50">
                     <div className="flex items-center gap-2">
                       <MessageSquare className="h-3.5 w-3.5 text-muted-foreground" />
@@ -462,10 +336,11 @@ export default function Workspace() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      onClick={() => setChatOpen(false)}
+                      onClick={() => setShowFilesSidebar(!showFilesSidebar)}
                       className="h-5 w-5"
+                      title="Toggle files"
                     >
-                      <X className="h-3 w-3" />
+                      <Folder className="h-3 w-3" />
                     </Button>
                   </div>
 
@@ -556,20 +431,46 @@ export default function Workspace() {
                   </div>
                 </div>
               </ResizablePanel>
-            </>
-          )}
 
-          {/* Chat Toggle */}
-          {!chatOpen && (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setChatOpen(true)}
-              className="h-full w-8 rounded-none border-l border-white/5"
-              title="Open chat"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
+              <ResizableHandle withHandle />
+
+              {/* Console */}
+              <ResizablePanel defaultSize={40} minSize={20}>
+                <div className="h-full flex flex-col bg-background">
+                  <div className="h-8 border-b border-white/5 px-3 flex items-center text-xs font-semibold text-muted-foreground bg-card/50">
+                    Console
+                  </div>
+                  <ScrollArea className="flex-1">
+                    <div className="font-mono text-xs p-3 text-muted-foreground whitespace-pre-wrap">
+                      Ready for commands
+                    </div>
+                  </ScrollArea>
+                </div>
+              </ResizablePanel>
+            </ResizablePanelGroup>
+          </ResizablePanel>
+
+          {/* Files Sidebar (Hidden by default, toggle with folder icon) */}
+          {showFilesSidebar && (
+            <>
+              <ResizableHandle withHandle />
+              <ResizablePanel defaultSize={20} minSize={12} maxSize={30}>
+                <div className="h-full flex flex-col bg-card/30 border-r border-white/5">
+                  <div className="flex border-b border-white/5 p-2 items-center gap-2">
+                    <Folder className="h-3.5 w-3.5 text-muted-foreground" />
+                    <span className="text-xs font-semibold">Files</span>
+                  </div>
+                  <ScrollArea className="flex-1">
+                    <div className="p-1.5">
+                      <FileTreeNode path="" />
+                      {files.length === 0 && (
+                        <div className="text-center py-6 text-muted-foreground text-xs">No files</div>
+                      )}
+                    </div>
+                  </ScrollArea>
+                </div>
+              </ResizablePanel>
+            </>
           )}
         </ResizablePanelGroup>
       </div>
