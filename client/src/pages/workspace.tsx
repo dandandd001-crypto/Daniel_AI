@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useParams, useLocation } from "wouter";
 import {
   ChevronLeft, Send, Folder, FileText, Plus, MessageSquare, Settings, 
-  Loader2, FolderOpen, ChevronDown, X
+  Loader2, FolderOpen, ChevronDown, X, Eye, Terminal
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -70,7 +70,12 @@ export default function Workspace() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [newApiKey, setNewApiKey] = useState("");
-  const [showFilesSidebar, setShowFilesSidebar] = useState(false);
+  
+  // Panel visibility states
+  const [showChat, setShowChat] = useState(true);
+  const [showConsole, setShowConsole] = useState(true);
+  const [showPreview, setShowPreview] = useState(true);
+  const [showFiles, setShowFiles] = useState(false);
   
   const wsRef = useRef<WebSocket | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -264,6 +269,18 @@ export default function Workspace() {
     );
   };
 
+  const PanelButton = ({ icon: Icon, label, isActive, onClick }: any) => (
+    <Button
+      variant={isActive ? "default" : "outline"}
+      size="sm"
+      className="h-7 text-xs"
+      onClick={onClick}
+    >
+      <Icon className="h-3 w-3 mr-1" />
+      {label}
+    </Button>
+  );
+
   return (
     <div className="h-screen flex flex-col bg-background">
       {/* Header */}
@@ -287,6 +304,14 @@ export default function Workspace() {
           <Settings className="h-3.5 w-3.5" />
         </Button>
       </header>
+
+      {/* Panel Toggle Buttons */}
+      <div className="h-8 border-b border-white/5 bg-card/30 px-3 flex items-center gap-2 overflow-x-auto">
+        <PanelButton icon={MessageSquare} label="Chat" isActive={showChat} onClick={() => setShowChat(!showChat)} />
+        <PanelButton icon={Terminal} label="Console" isActive={showConsole} onClick={() => setShowConsole(!showConsole)} />
+        <PanelButton icon={Eye} label="Preview" isActive={showPreview} onClick={() => setShowPreview(!showPreview)} />
+        <PanelButton icon={Folder} label="Files" isActive={showFiles} onClick={() => setShowFiles(!showFiles)} />
+      </div>
 
       {/* Settings Modal */}
       <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
@@ -321,31 +346,16 @@ export default function Workspace() {
 
       {/* Main Content */}
       <div className="flex-1 flex overflow-hidden">
-        <ResizablePanelGroup direction="horizontal">
-          {/* Chat & Console */}
-          <ResizablePanel defaultSize={100}>
-            <ResizablePanelGroup direction="vertical">
-              {/* Chat */}
-              <ResizablePanel defaultSize={60} minSize={40}>
+        <ResizablePanelGroup direction="vertical">
+          {/* Chat Panel */}
+          {showChat && (
+            <>
+              <ResizablePanel defaultSize={33} minSize={20}>
                 <div className="h-full flex flex-col bg-background">
-                  <div className="h-8 border-b border-white/5 flex items-center justify-between px-3 bg-card/50">
-                    <div className="flex items-center gap-2">
-                      <MessageSquare className="h-3.5 w-3.5 text-muted-foreground" />
-                      <span className="text-xs font-semibold">Chat</span>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => setShowFilesSidebar(!showFilesSidebar)}
-                      className="h-5 w-5"
-                      title="Toggle files"
-                    >
-                      <Folder className="h-3 w-3" />
-                    </Button>
+                  <div className="h-6 border-b border-white/5 px-2 flex items-center text-xs font-semibold text-muted-foreground bg-card/30">
+                    Chat
                   </div>
-
-                  {/* File Upload & New Chat */}
-                  <div className="border-b border-white/5 p-1.5 space-y-1">
+                  <div className="border-b border-white/5 p-1 space-y-1">
                     <input
                       type="file"
                       id="file-upload"
@@ -374,36 +384,32 @@ export default function Workspace() {
                     <Button
                       variant="outline"
                       size="sm"
-                      className="w-full h-7 text-xs border-dashed border-white/10"
+                      className="w-full h-6 text-xs border-dashed border-white/10"
                       onClick={() => document.getElementById("file-upload")?.click()}
                       data-testid="button-upload-file"
                     >
-                      <Plus className="h-3 w-3 mr-1" />
+                      <Plus className="h-2.5 w-2.5 mr-1" />
                       Upload
                     </Button>
                     <Button
                       variant="outline"
                       size="sm"
-                      className="w-full h-7 text-xs border-dashed border-white/10"
+                      className="w-full h-6 text-xs border-dashed border-white/10"
                       onClick={() => createChat.mutate()}
                       data-testid="button-new-chat"
                     >
-                      <Plus className="h-3 w-3 mr-1" />
-                      Chat
+                      <Plus className="h-2.5 w-2.5 mr-1" />
+                      New Chat
                     </Button>
                   </div>
-
-                  {/* Messages */}
                   <ScrollArea className="flex-1">
                     <div className="p-2">
                       {messages.map(renderMessage)}
                       <div ref={messagesEndRef} />
                     </div>
                   </ScrollArea>
-
-                  {/* Input */}
-                  <div className="border-t border-white/5 p-2 bg-card/50 space-y-1.5">
-                    <div className="flex gap-1.5">
+                  <div className="border-t border-white/5 p-2 bg-card/50">
+                    <div className="flex gap-1">
                       <Input
                         value={inputMessage}
                         onChange={(e) => setInputMessage(e.target.value)}
@@ -431,13 +437,16 @@ export default function Workspace() {
                   </div>
                 </div>
               </ResizablePanel>
-
               <ResizableHandle withHandle />
+            </>
+          )}
 
-              {/* Console */}
-              <ResizablePanel defaultSize={40} minSize={20}>
+          {/* Console Panel */}
+          {showConsole && (
+            <>
+              <ResizablePanel defaultSize={33} minSize={20}>
                 <div className="h-full flex flex-col bg-background">
-                  <div className="h-8 border-b border-white/5 px-3 flex items-center text-xs font-semibold text-muted-foreground bg-card/50">
+                  <div className="h-6 border-b border-white/5 px-2 flex items-center text-xs font-semibold text-muted-foreground bg-card/30">
                     Console
                   </div>
                   <ScrollArea className="flex-1">
@@ -447,30 +456,47 @@ export default function Workspace() {
                   </ScrollArea>
                 </div>
               </ResizablePanel>
-            </ResizablePanelGroup>
-          </ResizablePanel>
-
-          {/* Files Sidebar (Hidden by default, toggle with folder icon) */}
-          {showFilesSidebar && (
-            <>
               <ResizableHandle withHandle />
-              <ResizablePanel defaultSize={20} minSize={12} maxSize={30}>
-                <div className="h-full flex flex-col bg-card/30 border-r border-white/5">
-                  <div className="flex border-b border-white/5 p-2 items-center gap-2">
-                    <Folder className="h-3.5 w-3.5 text-muted-foreground" />
-                    <span className="text-xs font-semibold">Files</span>
+            </>
+          )}
+
+          {/* Preview Panel */}
+          {showPreview && (
+            <>
+              <ResizablePanel defaultSize={33} minSize={20}>
+                <div className="h-full flex flex-col bg-background">
+                  <div className="h-6 border-b border-white/5 px-2 flex items-center text-xs font-semibold text-muted-foreground bg-card/30">
+                    Preview
                   </div>
-                  <ScrollArea className="flex-1">
-                    <div className="p-1.5">
-                      <FileTreeNode path="" />
-                      {files.length === 0 && (
-                        <div className="text-center py-6 text-muted-foreground text-xs">No files</div>
-                      )}
-                    </div>
-                  </ScrollArea>
+                  <iframe
+                    src="http://localhost:8000/"
+                    className="flex-1 border-0 bg-white"
+                    title="App Preview"
+                    sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-modals"
+                  />
                 </div>
               </ResizablePanel>
+              <ResizableHandle withHandle />
             </>
+          )}
+
+          {/* Files Panel */}
+          {showFiles && (
+            <ResizablePanel defaultSize={33} minSize={20}>
+              <div className="h-full flex flex-col bg-card/30">
+                <div className="h-6 border-b border-white/5 px-2 flex items-center text-xs font-semibold text-muted-foreground bg-card/50">
+                  Files
+                </div>
+                <ScrollArea className="flex-1">
+                  <div className="p-1.5">
+                    <FileTreeNode path="" />
+                    {files.length === 0 && (
+                      <div className="text-center py-6 text-muted-foreground text-xs">No files</div>
+                    )}
+                  </div>
+                </ScrollArea>
+              </div>
+            </ResizablePanel>
           )}
         </ResizablePanelGroup>
       </div>
