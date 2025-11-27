@@ -70,6 +70,7 @@ export default function Workspace() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [newApiKey, setNewApiKey] = useState("");
+  const [previewUrl, setPreviewUrl] = useState("http://localhost:8000");
   
   // Panel visibility states
   const [showChat, setShowChat] = useState(true);
@@ -412,11 +413,25 @@ export default function Workspace() {
               />
               <p className="text-xs text-muted-foreground mt-1">Update your {project?.provider} API key</p>
             </div>
+            <div>
+              <label className="text-sm font-medium">Preview URL</label>
+              <Input
+                value={previewUrl}
+                onChange={(e) => setPreviewUrl(e.target.value)}
+                placeholder="http://localhost:8000"
+                className="mt-1"
+              />
+              <p className="text-xs text-muted-foreground mt-1">URL where your app is running (e.g., http://localhost:3000 or https://myapp.com)</p>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setSettingsOpen(false)}>Cancel</Button>
             <Button 
-              onClick={() => updateApiKeyMutation.mutate(newApiKey)}
+              onClick={() => {
+                if (newApiKey.trim()) {
+                  updateApiKeyMutation.mutate(newApiKey);
+                }
+              }}
               disabled={!newApiKey.trim() || updateApiKeyMutation.isPending}
             >
               {updateApiKeyMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Update"}
@@ -595,7 +610,7 @@ export default function Workspace() {
                     Preview
                   </div>
                   <iframe
-                    src="http://localhost:8000/"
+                    src={previewUrl}
                     className="flex-1 border-0 bg-white"
                     title="App Preview"
                     sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-modals"
