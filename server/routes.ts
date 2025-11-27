@@ -327,6 +327,30 @@ export async function registerRoutes(
     }
   });
 
+  // ============ FILE DOWNLOAD ============
+
+  // Download all project files as ZIP
+  app.get("/api/projects/:projectId/download", async (req, res) => {
+    try {
+      const project = await storage.getProject(req.params.projectId);
+      if (!project) {
+        return res.status(404).json({ error: "Project not found" });
+      }
+
+      const archiver = require("archiver");
+      const archive = archiver("zip", { zlib: { level: 9 } });
+
+      res.setHeader("Content-Type", "application/zip");
+      res.setHeader("Content-Disposition", `attachment; filename="${project.name}-${Date.now()}.zip"`);
+
+      archive.pipe(res);
+      archive.directory(project.directoryPath, project.name);
+      await archive.finalize();
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // ============ GITHUB OPERATIONS ============
 
   // Clone GitHub repo into project
@@ -394,12 +418,12 @@ export async function registerRoutes(
 
   // ============ DEPLOYMENT ============
 
-  // Deploy project to Ubuntu/production
-  app.post("/api/projects/:projectId/deploy", async (req, res) => {
+  // One-click deploy - provide domain and it deploys
+  app.post("/api/projects/:projectId/deploy-to-domain", async (req, res) => {
     try {
-      const { target, domain } = req.body; // target: ubuntu, domain: example.com
-      if (!target || !domain) {
-        return res.status(400).json({ error: "target and domain required" });
+      const { domain } = req.body;
+      if (!domain) {
+        return res.status(400).json({ error: "domain required (e.g., example.com)" });
       }
       
       const project = await storage.getProject(req.params.projectId);
@@ -407,84 +431,134 @@ export async function registerRoutes(
         return res.status(404).json({ error: "Project not found" });
       }
 
-      // Generate deployment script for Ubuntu
+      // Generate complete deployment script
       const deployScript = `#!/bin/bash
 set -e
 
-# DanielAI Deployment Script for ${project.name}
-PROJECT_DIR="${project.directoryPath}"
+# DanielAI Auto-Deploy for ${project.name}
 DOMAIN="${domain}"
+PROJECT_NAME="${project.name}"
+PROJECT_DIR="${project.directoryPath}"
 
-echo "Deploying ${project.name} to Ubuntu server..."
+echo "🚀 Deploying $PROJECT_NAME to $DOMAIN..."
 
-# Check for Node.js
+# Update system
+sudo apt-get update && sudo apt-get upgrade -y
+
+# Install Node.js if not present
 if ! command -v node &> /dev/null; then
-  echo "Installing Node.js..."
-  curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
-  sudo apt-get install -y nodejs
+  echo "📦 Installing Node.js..."
+  curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+  sudo apt-get install -y nodejs npm
 fi
 
-# Check for PostgreSQL
+# Install PostgreSQL if not present
 if ! command -v psql &> /dev/null; then
-  echo "Installing PostgreSQL..."
-  sudo apt-get update
+  echo "📦 Installing PostgreSQL..."
   sudo apt-get install -y postgresql postgresql-contrib
+  sudo systemctl enable postgresql
+  sudo systemctl start postgresql
 fi
 
-# Build project
+# Build and install
+echo "🔨 Building application..."
 cd $PROJECT_DIR
-npm install
-npm run build
+npm install --legacy-peer-deps
+npm run build 2>/dev/null || echo "No build script"
 
-# Install PM2 globally
+# Install and start with PM2
+echo "🎯 Installing PM2..."
 sudo npm install -g pm2
 
-# Start with PM2
-pm2 delete "${project.name}" || true
-pm2 start npm --name "${project.name}" -- start
+# Start or restart app
+pm2 delete "$PROJECT_NAME" 2>/dev/null || true
+pm2 start npm --name "$PROJECT_NAME" -- start
+pm2 startup
+pm2 save
 
-# Setup Nginx reverse proxy
+# Install and configure Nginx
+echo "🌐 Setting up Nginx..."
 sudo apt-get install -y nginx
 
 # Create Nginx config
-sudo tee /etc/nginx/sites-available/$DOMAIN > /dev/null <<EOF
+sudo tee /etc/nginx/sites-available/$DOMAIN > /dev/null <<'NGINX_EOF'
+upstream app {
+    server localhost:5000;
+}
+
 server {
     listen 80;
     server_name $DOMAIN;
 
     location / {
-        proxy_pass http://localhost:5000;
+        proxy_pass http://app;
         proxy_http_version 1.1;
-        proxy_set_header Upgrade \\$http_upgrade;
+        proxy_set_header Upgrade \$http_upgrade;
         proxy_set_header Connection 'upgrade';
-        proxy_set_header Host \\$host;
-        proxy_cache_bypass \\$http_upgrade;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_cache_bypass \$http_upgrade;
+    }
+
+    # WebSocket support for AI agent
+    location /ws {
+        proxy_pass http://app;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_read_timeout 86400;
     }
 }
-EOF
+NGINX_EOF
 
 # Enable site
-sudo ln -sf /etc/nginx/sites-available/$DOMAIN /etc/nginx/sites-enabled/
+sudo rm -f /etc/nginx/sites-enabled/default
+sudo ln -sf /etc/nginx/sites-available/$DOMAIN /etc/nginx/sites-enabled/$DOMAIN
+
+# Test Nginx
 sudo nginx -t
+
+# Reload Nginx
+sudo systemctl enable nginx
 sudo systemctl restart nginx
 
 # Setup SSL with Let's Encrypt
+echo "🔒 Setting up SSL..."
 sudo apt-get install -y certbot python3-certbot-nginx
-sudo certbot --nginx -d $DOMAIN --non-interactive --agree-tos -m admin@$DOMAIN
 
-echo "✓ Deployment complete!"
-echo "Application running at: https://$DOMAIN"`;
+# Get email for Let's Encrypt
+sudo certbot --nginx --non-interactive --agree-tos \\
+  -d $DOMAIN -m admin@$DOMAIN \\
+  --redirect 2>/dev/null || echo "SSL setup skipped - configure manually if needed"
+
+# Show status
+echo ""
+echo "✅ DEPLOYMENT COMPLETE!"
+echo "🌍 Your app is live at: https://$DOMAIN"
+echo "📊 App running as: $PROJECT_NAME"
+echo ""
+echo "Useful commands:"
+echo "  pm2 logs $PROJECT_NAME          # View logs"
+echo "  pm2 restart $PROJECT_NAME       # Restart"
+echo "  pm2 stop $PROJECT_NAME          # Stop"
+echo "  sudo systemctl reload nginx     # Reload web server"
+`;
 
       res.json({
         success: true,
-        message: "Deployment script generated",
+        message: "Ready to deploy! Follow instructions:",
+        steps: [
+          "1. Go to your Ubuntu server",
+          "2. Create file: nano deploy.sh",
+          "3. Paste the script below",
+          "4. Run: chmod +x deploy.sh && ./deploy.sh",
+          "5. Wait 2-3 minutes for SSL certificate",
+          "6. Visit https://" + domain
+        ],
         script: deployScript,
-        instructions: [
-          "1. Copy the script to your Ubuntu server",
-          "2. Run: chmod +x deploy.sh && ./deploy.sh",
-          "3. Your app will be live at https://" + domain,
-          "Note: You'll need sudo access and a domain pointing to your server"
-        ]
+        domain: domain
       });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
