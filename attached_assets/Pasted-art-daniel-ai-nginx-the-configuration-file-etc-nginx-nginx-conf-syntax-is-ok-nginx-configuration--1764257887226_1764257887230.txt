@@ -1,0 +1,36 @@
+art daniel-ai
+nginx: the configuration file /etc/nginx/nginx.conf syntax is ok
+nginx: configuration file /etc/nginx/nginx.conf test is successful
+[TAILING] Tailing last 15 lines for [daniel-ai] process (change the value with --lines option)
+/home/ubuntu/.pm2/logs/daniel-ai-out.log last 15 lines:
+0|daniel-a | > rest-express@1.0.0 start
+0|daniel-a | > NODE_ENV=production node dist/index.cjs
+0|daniel-a |
+0|daniel-a |
+0|daniel-a | > rest-express@1.0.0 start
+0|daniel-a | > NODE_ENV=production node dist/index.cjs
+0|daniel-a |
+0|daniel-a |
+0|daniel-a | > rest-express@1.0.0 start
+0|daniel-a | > NODE_ENV=production node dist/index.cjs
+0|daniel-a |
+0|daniel-a |
+0|daniel-a | > rest-express@1.0.0 start
+0|daniel-a | > NODE_ENV=production node dist/index.cjs
+0|daniel-a |
+/home/ubuntu/.pm2/logs/daniel-ai-error.log last 15 lines:
+0|daniel-a | or(`OpenAI API error: ${i.status} - ${l}`)}let a=await i.json(),s=a.choices[0],o=s.message,c={content:o.content||"",finishReason:s.finish_reason==="tool_calls"?"tool_calls":s.finish_reason==="length"?"length":"stop",usage:a.usage?{promptTokens:a.usage.prompt_tokens,completionTokens:a.usage.completion_tokens,totalTokens:a.usage.total_tokens}:void 0};return o.tool_calls&&(c.toolCalls=o.tool_calls.map(l=>({id:l.id,name:l.function.name,arguments:JSON.parse(l.function.arguments)}))),c}async*streamComplete(e){let r=this.model.startsWith("o1"),n={model:this.model,messages:this.formatMessages(e.messages),stream:!0};r?n.max_completion_tokens=e.maxTokens||4096:(n.max_tokens=e.maxTokens||4096,n.temperature=e.temperature??.7),e.tools&&e.tools.length>0&&!r&&(n.tools=this.formatTools(e.tools),n.tool_choice="auto");let i=await fetch(`${this.baseUrl}/chat/completions`,{method:"POST",headers:{Authorization:`Bearer ${this.apiKey}`,"Content-Type":"application/json"},body:JSON.stringify(n)});if(!i.ok){let u=await i.text();yield{type:"error",error:`OpenAI API error: ${i.status} - ${u}`};return}let a=i.body?.getReader();if(!a){yield{type:"error",error:"No response body"};return}let s=new TextDecoder,o="",c=new Map;for(;;){let{done:u,value:f}=await a.read();if(u)break;o+=s.decode(f,{stream:!0});let m=o.split(`
+0|daniel-a |
+0|daniel-a |
+0|daniel-a | Error: DATABASE_URL environment variable is required
+0|daniel-a |     at Object.<anonymous> (/var/www/danielai/Daniel_AI/dist/index.cjs:78:73856)
+0|daniel-a |     at Module._compile (node:internal/modules/cjs/loader:1761:14)
+0|daniel-a |     at Object..js (node:internal/modules/cjs/loader:1893:10)
+0|daniel-a |     at Module.load (node:internal/modules/cjs/loader:1481:32)
+0|daniel-a |     at Module._load (node:internal/modules/cjs/loader:1300:12)
+0|daniel-a |     at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+0|daniel-a |     at wrapModuleLoad (node:internal/modules/cjs/loader:245:24)
+0|daniel-a |     at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)
+0|daniel-a |     at node:internal/main/run_main_module:33:47
+0|daniel-a |
+0|daniel-a | Node.js v24.11.1
