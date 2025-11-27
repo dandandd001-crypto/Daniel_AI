@@ -415,7 +415,6 @@ export async function registerRoutes(
         return res.status(404).json({ error: "Project not found" });
       }
 
-      const { execSync } = require("child_process");
       execSync(`cd ${project.directoryPath} && git init && git config user.email "ai@danieldai.com" && git config user.name "DanielAI"`, {
         encoding: "utf-8",
       });
@@ -434,7 +433,6 @@ export async function registerRoutes(
         return res.status(404).json({ error: "Project not found" });
       }
 
-      const { execSync } = require("child_process");
       const status = execSync(`cd ${project.directoryPath} && git status --short`, {
         encoding: "utf-8",
       });
