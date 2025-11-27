@@ -512,29 +512,30 @@ export default function Workspace() {
           <ResizablePanel defaultSize={33} minSize={20} style={{ display: showFiles ? "flex" : "none" }}>
             {showFiles && (
               <>
-              <div className="h-full flex flex-col bg-card/30">
-                <div className="h-6 border-b border-white/5 px-2 flex items-center justify-between text-xs font-semibold text-muted-foreground bg-card/50">
-                  <span>Files</span>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-4 w-4"
-                    onClick={downloadFiles}
-                    title="Download all files as ZIP"
-                    data-testid="button-download-files"
-                  >
-                    <FileText className="h-2.5 w-2.5" />
-                  </Button>
-                </div>
-                <ScrollArea className="flex-1">
-                  <div className="p-1.5">
-                    <FileTreeNode path="" />
-                    {files.length === 0 && (
-                      <div className="text-center py-6 text-muted-foreground text-xs">No files</div>
-                    )}
+                <div className="h-full flex flex-col bg-card/30">
+                  <div className="h-6 border-b border-white/5 px-2 flex items-center justify-between text-xs font-semibold text-muted-foreground bg-card/50">
+                    <span>Files</span>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-4 w-4"
+                      onClick={downloadFiles}
+                      title="Download all files as ZIP"
+                      data-testid="button-download-files"
+                    >
+                      <FileText className="h-2.5 w-2.5" />
+                    </Button>
                   </div>
-                </ScrollArea>
-              </div>
+                  <ScrollArea className="flex-1">
+                    <div className="p-1.5">
+                      <FileTreeNode path="" />
+                      {files.length === 0 && (
+                        <div className="text-center py-6 text-muted-foreground text-xs">No files</div>
+                      )}
+                    </div>
+                  </ScrollArea>
+                </div>
+              </>
             )}
           </ResizablePanel>
         </ResizablePanelGroup>
