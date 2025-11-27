@@ -76,9 +76,11 @@ export default function Workspace() {
   const [showConsole, setShowConsole] = useState(true);
   const [showPreview, setShowPreview] = useState(true);
   const [showFiles, setShowFiles] = useState(false);
+  const [consoleOutput, setConsoleOutput] = useState<string>("");
   
   const wsRef = useRef<WebSocket | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const consoleEndRef = useRef<HTMLDivElement>(null);
 
   const { data: project, refetch: refetchProject } = useQuery<Project>({
     queryKey: ["project", projectId],
@@ -174,13 +176,32 @@ export default function Workspace() {
       const data: AgentEvent = JSON.parse(event.data);
       
       switch (data.type) {
+        case "thinking":
+          setConsoleOutput((prev) => prev + "\n⏳ Thinking...\n");
+          break;
+        case "content":
+          setConsoleOutput((prev) => prev + (data.content || ""));
+          break;
+        case "tool_call":
+          if (data.toolCall) {
+            setConsoleOutput((prev) => prev + `\n→ Executing: ${data.toolCall?.name}\n`);
+          }
+          break;
+        case "tool_result":
+          if (data.toolResult) {
+            setConsoleOutput((prev) => prev + `✓ ${data.toolResult?.name}\n${data.toolResult?.result?.substring(0, 1000)}\n`);
+            refetchFiles();
+          }
+          break;
         case "done":
           setIsStreaming(false);
           refetchMessages();
           refetchFiles();
+          setConsoleOutput((prev) => prev + "\n✓ Complete\n");
           break;
         case "error":
           setIsStreaming(false);
+          setConsoleOutput((prev) => prev + `\n✗ Error: ${data.error}\n`);
           break;
       }
     };
@@ -193,6 +214,10 @@ export default function Workspace() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  useEffect(() => {
+    consoleEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [consoleOutput]);
 
   const sendMessage = useCallback(() => {
     if (!inputMessage.trim() || !wsRef.current) return;
@@ -446,12 +471,22 @@ export default function Workspace() {
             <>
               <ResizablePanel defaultSize={33} minSize={20}>
                 <div className="h-full flex flex-col bg-background">
-                  <div className="h-6 border-b border-white/5 px-2 flex items-center text-xs font-semibold text-muted-foreground bg-card/30">
-                    Console
+                  <div className="h-6 border-b border-white/5 px-2 flex items-center justify-between text-xs font-semibold text-muted-foreground bg-card/30">
+                    <span>Console</span>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-4 w-4"
+                      onClick={() => setConsoleOutput("")}
+                      title="Clear console"
+                    >
+                      <X className="h-2.5 w-2.5" />
+                    </Button>
                   </div>
                   <ScrollArea className="flex-1">
                     <div className="font-mono text-xs p-3 text-muted-foreground whitespace-pre-wrap">
-                      Ready for commands
+                      {consoleOutput || "Ready for commands. Ask the AI to create and run something!"}
+                      <div ref={consoleEndRef} />
                     </div>
                   </ScrollArea>
                 </div>

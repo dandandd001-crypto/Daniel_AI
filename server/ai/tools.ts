@@ -109,13 +109,13 @@ export const toolDefinitions: ToolDefinition[] = [
   },
   {
     name: "execute_shell",
-    description: "Execute a shell command within the project directory. Use this for running scripts, installing packages, starting servers, building projects, etc.",
+    description: "Execute a shell command within the project directory. Works with: npm, python, node, bash scripts, http servers, etc. Output is captured and shown. Use for running servers on port 8000-9000.",
     parameters: {
       type: "object",
       properties: {
         command: {
           type: "string",
-          description: "The shell command to execute",
+          description: "The shell command to execute. Examples: 'npm install', 'python3 app.py', 'node server.js', 'python3 -m http.server 8000'",
         },
         background: {
           type: "boolean",
