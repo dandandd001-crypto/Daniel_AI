@@ -5,6 +5,9 @@ import { storage } from "./storage";
 import { createAgent } from "./ai/agent";
 import { aiModels, insertProjectSchema, insertChatSchema, insertEnvVarSchema } from "@shared/schema";
 import { z } from "zod";
+import archiver from "archiver";
+import AdmZip from "adm-zip";
+import { execSync } from "child_process";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -337,7 +340,6 @@ export async function registerRoutes(
         return res.status(404).json({ error: "Project not found" });
       }
 
-      const archiver = require("archiver");
       const archive = archiver("zip", { zlib: { level: 9 } });
 
       res.setHeader("Content-Type", "application/zip");
@@ -364,7 +366,6 @@ export async function registerRoutes(
         return res.status(404).json({ error: "Project not found" });
       }
 
-      const AdmZip = require("adm-zip");
       const buffer = Buffer.from(zipData, "base64");
       const zip = new AdmZip(buffer);
 
@@ -395,7 +396,6 @@ export async function registerRoutes(
         return res.status(404).json({ error: "Project not found" });
       }
 
-      const { execSync } = require("child_process");
       const result = execSync(`cd ${project.directoryPath} && git clone ${repoUrl} .`, {
         encoding: "utf-8",
         maxBuffer: 10 * 1024 * 1024,
