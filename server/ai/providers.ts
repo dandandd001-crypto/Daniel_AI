@@ -266,7 +266,8 @@ export class OpenAIProvider implements AIProviderAdapter {
     }
 
     // Emit tool calls at the end
-    for (const [, tc] of toolCalls) {
+    const toolCallsArray = Array.from(toolCalls.values());
+    for (const tc of toolCallsArray) {
       if (tc.id && tc.name) {
         yield {
           type: "tool_call",
