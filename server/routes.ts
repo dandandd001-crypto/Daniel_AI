@@ -327,7 +327,7 @@ export async function registerRoutes(
     }
   });
 
-  // ============ FILE DOWNLOAD ============
+  // ============ FILE OPERATIONS ============
 
   // Download all project files as ZIP
   app.get("/api/projects/:projectId/download", async (req, res) => {
@@ -346,6 +346,35 @@ export async function registerRoutes(
       archive.pipe(res);
       archive.directory(project.directoryPath, project.name);
       await archive.finalize();
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Upload ZIP/folder to project
+  app.post("/api/projects/:projectId/files/upload-zip", async (req, res) => {
+    try {
+      const { zipData, filename } = req.body;
+      if (!zipData || !filename) {
+        return res.status(400).json({ error: "zipData and filename required" });
+      }
+
+      const project = await storage.getProject(req.params.projectId);
+      if (!project) {
+        return res.status(404).json({ error: "Project not found" });
+      }
+
+      const AdmZip = require("adm-zip");
+      const buffer = Buffer.from(zipData, "base64");
+      const zip = new AdmZip(buffer);
+
+      // Extract to project directory
+      zip.extractAllTo(project.directoryPath, true);
+
+      // Sync files to database
+      await storage.syncProjectFiles(project.id);
+
+      res.json({ success: true, message: "Files extracted successfully" });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }

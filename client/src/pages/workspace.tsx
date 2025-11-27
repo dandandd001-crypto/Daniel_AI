@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useParams, useLocation } from "wouter";
 import {
   ChevronLeft, Send, Folder, FileText, Plus, MessageSquare, Settings, 
-  Loader2, FolderOpen, ChevronDown, X, Eye, Terminal
+  Loader2, FolderOpen, ChevronDown, X, Eye, Terminal, Download, Rocket
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -77,6 +77,8 @@ export default function Workspace() {
   const [showPreview, setShowPreview] = useState(true);
   const [showFiles, setShowFiles] = useState(false);
   const [consoleOutput, setConsoleOutput] = useState<string>("");
+  const [deployDomain, setDeployDomain] = useState("");
+  const [deployOpen, setDeployOpen] = useState(false);
   
   const wsRef = useRef<WebSocket | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -155,6 +157,44 @@ export default function Workspace() {
       document.body.removeChild(a);
     } catch (error) {
       console.error("Download failed:", error);
+    }
+  };
+
+  const uploadZipFolder = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !projectId) return;
+    try {
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        const base64 = (event.target?.result as string).split(",")[1];
+        const res = await fetch(`/api/projects/${projectId}/files/upload-zip`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ zipData: base64, filename: file.name }),
+        });
+        if (!res.ok) throw new Error("Upload failed");
+        refetchFiles();
+      };
+      reader.readAsDataURL(file);
+    } catch (error) {
+      console.error("ZIP upload failed:", error);
+    }
+  };
+
+  const deployProject = async () => {
+    if (!deployDomain.trim() || !projectId) return;
+    try {
+      const res = await fetch(`/api/projects/${projectId}/deploy-to-domain`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ domain: deployDomain }),
+      });
+      if (!res.ok) throw new Error("Deploy failed");
+      const data = await res.json();
+      setConsoleOutput((prev) => prev + `\n\n🚀 DEPLOYMENT SCRIPT:\n\n${data.script}\n\n📋 INSTRUCTIONS:\n${data.steps.join("\n")}`);
+      setDeployOpen(false);
+    } catch (error) {
+      console.error("Deploy failed:", error);
     }
   };
 
@@ -312,29 +352,42 @@ export default function Workspace() {
   return (
     <div className="h-screen flex flex-col bg-background">
       {/* Header */}
-      <header className="h-10 border-b border-white/5 bg-card/50 flex items-center justify-between px-3">
-        <div className="flex items-center gap-2 min-w-0">
-          <Button variant="ghost" size="icon" onClick={() => setLocation("/dashboard")} className="h-7 w-7" data-testid="button-back">
+      <header className="h-10 border-b border-white/5 bg-card/50 flex items-center justify-between px-2 sm:px-3 gap-1 sm:gap-2">
+        <div className="flex items-center gap-1 sm:gap-2 min-w-0 flex-1">
+          <Button variant="ghost" size="icon" onClick={() => setLocation("/dashboard")} className="h-7 w-7 flex-shrink-0" data-testid="button-back">
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <span className="font-bold text-xs hidden sm:inline">DANIEL<span className="text-primary">AI</span></span>
-          <span className="text-muted-foreground text-xs">/</span>
-          <h1 className="font-semibold text-xs truncate">{project?.name || "Loading..."}</h1>
-          <span className="text-xs text-muted-foreground px-1.5 py-0.5 bg-white/5 rounded">{project?.model}</span>
+          <span className="font-bold text-xs hidden sm:inline flex-shrink-0">DANIEL<span className="text-primary">AI</span></span>
+          <span className="text-muted-foreground text-xs hidden sm:inline flex-shrink-0">/</span>
+          <h1 className="font-semibold text-xs truncate flex-1">{project?.name || "Loading..."}</h1>
+          <span className="text-xs text-muted-foreground px-1.5 py-0.5 bg-white/5 rounded hidden sm:inline flex-shrink-0">{project?.model}</span>
         </div>
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          className="h-7 w-7" 
-          data-testid="button-settings"
-          onClick={() => setSettingsOpen(true)}
-        >
-          <Settings className="h-3.5 w-3.5" />
-        </Button>
+        <div className="flex gap-1 flex-shrink-0">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="h-7 w-7" 
+            data-testid="button-deploy"
+            onClick={() => setDeployOpen(true)}
+            title="Deploy to your domain"
+          >
+            <Rocket className="h-3.5 w-3.5" />
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="h-7 w-7" 
+            data-testid="button-settings"
+            onClick={() => setSettingsOpen(true)}
+            title="Settings"
+          >
+            <Settings className="h-3.5 w-3.5" />
+          </Button>
+        </div>
       </header>
 
       {/* Panel Toggle Buttons */}
-      <div className="h-8 border-b border-white/5 bg-card/30 px-3 flex items-center gap-2 overflow-x-auto">
+      <div className="h-8 border-b border-white/5 bg-card/30 px-2 sm:px-3 flex items-center gap-1 sm:gap-2 overflow-x-auto">
         <PanelButton icon={MessageSquare} label="Chat" isActive={showChat} onClick={() => setShowChat(!showChat)} />
         <PanelButton icon={Terminal} label="Console" isActive={showConsole} onClick={() => setShowConsole(!showConsole)} />
         <PanelButton icon={Eye} label="Preview" isActive={showPreview} onClick={() => setShowPreview(!showPreview)} />
@@ -343,7 +396,7 @@ export default function Workspace() {
 
       {/* Settings Modal */}
       <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="w-[90vw] sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>Project Settings</DialogTitle>
           </DialogHeader>
@@ -367,6 +420,34 @@ export default function Workspace() {
               disabled={!newApiKey.trim() || updateApiKeyMutation.isPending}
             >
               {updateApiKeyMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Update"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Deploy Modal */}
+      <Dialog open={deployOpen} onOpenChange={setDeployOpen}>
+        <DialogContent className="w-[90vw] sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Deploy to Your Domain</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium">Domain Name</label>
+              <Input
+                value={deployDomain}
+                onChange={(e) => setDeployDomain(e.target.value)}
+                placeholder="example.com"
+                className="mt-1"
+              />
+              <p className="text-xs text-muted-foreground mt-1">Enter your domain name. Must point to your Ubuntu server's IP.</p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeployOpen(false)}>Cancel</Button>
+            <Button onClick={deployProject} disabled={!deployDomain.trim()}>
+              <Rocket className="h-4 w-4 mr-1" />
+              Generate Deploy Script
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -409,6 +490,13 @@ export default function Workspace() {
                         }
                       }}
                     />
+                    <input
+                      type="file"
+                      id="zip-upload"
+                      className="hidden"
+                      accept=".zip"
+                      onChange={uploadZipFolder}
+                    />
                     <Button
                       variant="outline"
                       size="sm"
@@ -417,7 +505,17 @@ export default function Workspace() {
                       data-testid="button-upload-file"
                     >
                       <Plus className="h-2.5 w-2.5 mr-1" />
-                      Upload
+                      File
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full h-6 text-xs border-dashed border-white/10"
+                      onClick={() => document.getElementById("zip-upload")?.click()}
+                      data-testid="button-upload-folder"
+                    >
+                      <Plus className="h-2.5 w-2.5 mr-1" />
+                      ZIP Folder
                     </Button>
                   </div>
                   <ScrollArea className="flex-1">
