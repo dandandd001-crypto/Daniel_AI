@@ -14,6 +14,13 @@ export async function registerRoutes(
   app: Express
 ): Promise<Server> {
   
+  // ============ MODELS ============
+  
+  // Get available AI models
+  app.get("/api/models", (req, res) => {
+    res.json(aiModels);
+  });
+  
   // ============ PROJECTS ============
   
   // Get all projects
