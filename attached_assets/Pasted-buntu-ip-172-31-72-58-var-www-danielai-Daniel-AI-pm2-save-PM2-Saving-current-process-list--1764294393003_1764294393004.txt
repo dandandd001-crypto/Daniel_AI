@@ -1,0 +1,52 @@
+buntu@ip-172-31-72-58:/var/www/danielai/Daniel_AI$ pm2 save
+[PM2] Saving current process list...
+[PM2] Successfully saved in /home/ubuntu/.pm2/dump.pm2
+ubuntu@ip-172-31-72-58:/var/www/danielai/Daniel_AI$ sudo pm2 startup systemd -u ubuntu --hp /home/ubuntu | bash
+bash: line 2: -------------: command not found
+bash: line 4: __/\\\\\\____/\\____________/\\____/\\\\_____: No such file or directory
+bash: line 5: _/\/////////\_/\\\________/\\\__/\///////\___: No such file or directory
+bash: line 6: _/\_______/\_/\//\____/\//\_///______//\__: No such file or directory
+bash: line 7: _/\\\\\\/__/\\///\/\/_/\___________/\/___: No such file or directory
+bash: line 8: _/\/////////____/\__///\/___/\________/\//_____: No such file or directory
+bash: line 9: _/\_____________/\____///_____/\_____/\//________: No such file or directory
+bash: line 10: _/\_____________/\_____________/\___/\/___________: No such file or directory
+bash: line 11: _/\_____________/\_____________/\__/\\\\\\\_: No such file or directory
+bash: line 12: _///______________///______________///__///////////////__: No such file or directory
+bash: line 15: Runtime: command not found
+bash: line 17: PM2: command not found
+bash: line 18: with: command not found
+bash: line 20: Start: command not found
+bash: line 21: $: command not found
+bash: line 23: Load: command not found
+bash: line 24: $: command not found
+bash: line 26: Monitor: command not found
+bash: line 27: $: command not found
+bash: line 29: Make: command not found
+bash: line 30: $: command not found
+bash: line 32: To: command not found
+bash: line 33: http://pm2.io/: No such file or directory
+bash: line 36: -------------: command not found
+bash: line 38: [PM2]: command not found
+bash: line 39: Platform: command not found
+bash: line 40: Template: command not found
+bash: line 41: [Unit]: command not found
+bash: line 42: process: command not found
+bash: line 46: [Service]: command not found
+bash: line 57: resurrect: command not found
+bash: line 58: reload: command not found
+kill: usage: kill [-s sigspec | -n signum | -sigspec] pid | jobspec ... or kill -l [sigspec]
+bash: line 61: [Install]: command not found
+bash: line 64: Target: command not found
+bash: line 65: /etc/systemd/system/pm2-ubuntu.service: Permission denied
+bash: line 66: Command: command not found
+bash: line 68: [PM2]: command not found
+bash: line 69: [PM2]: command not found
+bash: line 70: [PM2]: command not found
+Created symlink /etc/systemd/system/multi-user.target.wants/pm2-ubuntu.service → /etc/systemd/system/pm2-ubuntu.service.
+bash: line 71: [PM2]: command not found
+bash: line 72: +---------------------------------------+: command not found
+bash: line 73: [PM2]: command not found
+bash: line 74: $: command not found
+bash: line 76: [PM2]: command not found
+bash: line 77: $: command not found
+ubuntu@ip-172-31-72-58:/var/www/danielai/Daniel_AI$
