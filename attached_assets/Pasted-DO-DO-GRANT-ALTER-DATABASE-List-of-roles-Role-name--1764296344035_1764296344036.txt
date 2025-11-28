@@ -1,0 +1,70 @@
+DO
+DO
+GRANT
+ALTER DATABASE
+                                List of roles
+   Role name    |                         Attributes
+----------------+------------------------------------------------------------
+ daniel-ai_user |
+ danielai       |
+ postgres       | Superuser, Create role, Create DB, Replication, Bypass RLS
+
+                                                                List of databases
+     Name     |     Owner      | Encoding | Locale Provider | Collate |  Ctype  | ICU Locale | ICU Rules |           Access privileges
+--------------+----------------+----------+-----------------+---------+---------+------------+-----------+---------------------------------------
+ daniel-ai_db | daniel-ai_user | UTF8     | libc            | C.UTF-8 | C.UTF-8 |            |           | =Tc/"daniel-ai_user"                 +
+              |                |          |                 |         |         |            |           | "daniel-ai_user"=CTc/"daniel-ai_user"
+ danielai_db  | danielai       | UTF8     | libc            | C.UTF-8 | C.UTF-8 |            |           | =Tc/danielai                         +
+              |                |          |                 |         |         |            |           | danielai=CTc/danielai
+ postgres     | postgres       | UTF8     | libc            | C.UTF-8 | C.UTF-8 |            |           |
+ template0    | postgres       | UTF8     | libc            | C.UTF-8 | C.UTF-8 |            |           | =c/postgres                          +
+              |                |          |                 |         |         |            |           | postgres=CTc/postgres
+ template1    | postgres       | UTF8     | libc            | C.UTF-8 | C.UTF-8 |            |           | =c/postgres                          +
+              |                |          |                 |         |         |            |           | postgres=CTc/postgres
+(5 rows)
+
+ubuntu@ip-172-31-72-58:/var/www/danielai/Daniel_AI$ psql -U daniel-ai_user -h localhost -d daniel-ai_db -c "SELECT 1"
+Password for user daniel-ai_user:
+ ?column?
+----------
+        1
+(1 row)
+
+ubuntu@ip-172-31-72-58:/var/www/danielai/Daniel_AI$ npm run db:push
+
+> rest-express@1.0.0 db:push
+> drizzle-kit push
+
+No config path provided, using default 'drizzle.config.ts'
+Reading config file '/var/www/danielai/Daniel_AI/drizzle.config.ts'
+Using 'pg' driver for database querying
+[⣷] Pulling schema from database...
+error: password authentication failed for user "daniel-ai_user"
+    at /var/www/danielai/Daniel_AI/node_modules/pg-pool/index.js:45:11
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async Object.query (/var/www/danielai/Daniel_AI/node_modules/drizzle-kit/bin.cjs:80601:26)
+    at async fromDatabase2 (/var/www/danielai/Daniel_AI/node_modules/drizzle-kit/bin.cjs:19253:25) {
+  length: 110,
+  severity: 'FATAL',
+  code: '28P01',
+  detail: undefined,
+  hint: undefined,
+  position: undefined,
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'auth.c',
+  line: '331',
+  routine: 'auth_failed'
+}
+ubuntu@ip-172-31-72-58:/var/www/danielai/Daniel_AI$
+
+
+
+
+
