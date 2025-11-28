@@ -1,0 +1,46 @@
+ubuntu@ip-172-31-72-58:/var/www/danielai/Daniel_AI$ sudo systemctl status postgresql
+● postgresql.service - PostgreSQL RDBMS
+     Loaded: loaded (/usr/lib/systemd/system/postgresql.service; enabled;>     Active: active (exited) since Thu 2025-11-27 14:18:55 UTC; 10h ago
+   Main PID: 45003 (code=exited, status=0/SUCCESS)
+        CPU: 2ms
+
+Nov 27 14:18:55 ip-172-31-72-58 systemd[1]: Starting postgresql.service ->Nov 27 14:18:55 ip-172-31-72-58 systemd[1]: Finished postgresql.service ->
+ubuntu@ip-172-31-72-58:/var/www/danielai/Daniel_AI$ sudo -u postgres psql -l | grep daniel-ai
+ daniel-ai_db | daniel-ai_user | UTF8     | libc            | C.UTF-8 | C.UTF-8 |            |           | =Tc/"daniel-ai_user"                 +
+              |                |          |                 |         |         |            |           | "daniel-ai_user"=CTc/"daniel-ai_user"
+ubuntu@ip-172-31-72-58:/var/www/danielai/Daniel_AI$ sudo -u postgres psql -c "\du" | grep daniel-ai
+ daniel-ai_user |
+ubuntu@ip-172-31-72-58:/var/www/danielai/Daniel_AI$ cat /var/www/danielai/Daniel_AI/ecosystem.config.cjs | grep DATABASE_URL
+      DATABASE_URL: 'postgresql://daniel-ai_user:change_this_password_immediately@localhost:5432/daniel-ai_db',
+ubuntu@ip-172-31-72-58:/var/www/danielai/Daniel_AI$ psql postgresql://daniel-ai_user:change_this_password_immediately@localhost:5432/daniel-ai_db -c "SELECT 1"
+ ?column?
+----------
+        1
+(1 row)
+
+ubuntu@ip-172-31-72-58:/var/www/danielai/Daniel_AI$ sudo netstat -tuln | grep 5432
+sudo: netstat: command not found
+ubuntu@ip-172-31-72-58:/var/www/danielai/Daniel_AI$ sudo ss -tuln | grep 5432
+tcp   LISTEN 0      200            127.0.0.1:5432       0.0.0.0:*
+ubuntu@ip-172-31-72-58:/var/www/danielai/Daniel_AI$ sudo systemctl restart postgresql
+ubuntu@ip-172-31-72-58:/var/www/danielai/Daniel_AI$ pm2 restart daniel-ai
+Use --update-env to update environment variables
+[PM2] Applying action restartProcessId on app [daniel-ai](ids: [ 0 ])
+[PM2] [daniel-ai](0) ✓
+┌────┬────────────────────┬──────────┬──────┬───────────┬──────────┬──────────┐
+│ id │ name               │ mode     │ ↺    │ status    │ cpu      │ memory   │
+├────┼────────────────────┼──────────┼──────┼───────────┼──────────┼──────────┤
+│ 0  │ daniel-ai          │ cluster  │ 1    │ online    │ 0%       │ 46.3mb   │
+└────┴────────────────────┴──────────┴──────┴───────────┴──────────┴──────────┘
+ubuntu@ip-172-31-72-58:/var/www/danielai/Daniel_AI$ pm2 logs daniel-ai
+[TAILING] Tailing last 15 lines for [daniel-ai] process (change the value with --lines option)
+/home/ubuntu/.pm2/logs/daniel-ai-error-0.log last 15 lines:
+/home/ubuntu/.pm2/logs/daniel-ai-out-0.log last 15 lines:
+0|daniel-a | 21:51 AM [express] POST /api/projects 500 in 5ms :: {"error":"connect ECONNREFUSED 127.0.0.1:443"}
+0|daniel-a | 12:21:52 AM [express] GET /api/projects 500 in 3ms :: {"error":"connect ECONNREFUSED 127.0.0.1:443"}
+0|daniel-a | 12:21:52 AM [express] GET /api/models 200 in 0ms :: {"openai":[{"id":"gpt-4o","name":"GPT-4o","context":128000},{"id":"gpt-4o-mini","name":"GPT-4o Mini","context":128000},{"id":"gpt-4-turbo","name":"GPT-4 Turbo","context":128000},{"id":"gpt-4","name":"GPT-4","context":8192},{"id":"o1","name":"o1 (Reasoning)","context":128000},{"id":"o1-mini","name":"o1 Mini","context":128000},{"id":"o1-preview","name":"o1 Preview","context":128000},{"id":"gpt-3.5-turbo","name":"GPT-3.5 Turbo","context":16384}],"anthropic":[{"id":"claude-sonnet-4-5","name":"Claude Sonnet 4.5","context":200000},{"id":"claude-sonnet-4","name":"Claude Sonnet 4","context":200000},{"id":"claude-opus-4","name":"Claude Opus 4","context":200000},{"id":"claude-3-5-sonnet-20241022","name":"Claude 3.5 Sonnet","context":200000},{"id":"claude-3-5-haiku-20241022","name":"Claude 3.5 Haiku","context":200000}],"google":[{"id":"gemini-2.5-pro","name":"Gemini 2.5 Pro","context":1000000},{"id":"gemini-2.5-flash","name":"Gemini 2.5 Flash","context":1000000},{"id":"gemini-2.0-flash","name":"Gemini 2.0 Flash","context":1000000},{"id":"gemini-1.5-pro","name":"Gemini 1.5 Pro","context":1000000},{"id":"gemini-1.5-flash","name":"Gemini 1.5 Flash","context":1000000}]}
+0|daniel-a | 12:21:58 AM [express] GET /api/models 304 in 1ms :: {"openai":[{"id":"gpt-4o","name":"GPT-4o","context":128000},{"id":"gpt-4o-mini","name":"GPT-4o Mini","context":128000},{"id":"gpt-4-turbo","name":"GPT-4 Turbo","context":128000},{"id":"gpt-4","name":"GPT-4","context":8192},{"id":"o1","name":"o1 (Reasoning)","context":128000},{"id":"o1-mini","name":"o1 Mini","context":128000},{"id":"o1-preview","name":"o1 Preview","context":128000},{"id":"gpt-3.5-turbo","name":"GPT-3.5 Turbo","context":16384}],"anthropic":[{"id":"claude-sonnet-4-5","name":"Claude Sonnet 4.5","context":200000},{"id":"claude-sonnet-4","name":"Claude Sonnet 4","context":200000},{"id":"claude-opus-4","name":"Claude Opus 4","context":200000},{"id":"claude-3-5-sonnet-20241022","name":"Claude 3.5 Sonnet","context":200000},{"id":"claude-3-5-haiku-20241022","name":"Claude 3.5 Haiku","context":200000}],"google":[{"id":"gemini-2.5-pro","name":"Gemini 2.5 Pro","context":1000000},{"id":"gemini-2.5-flash","name":"Gemini 2.5 Flash","context":1000000},{"id":"gemini-2.0-flash","name":"Gemini 2.0 Flash","context":1000000},{"id":"gemini-1.5-pro","name":"Gemini 1.5 Pro","context":1000000},{"id":"gemini-1.5-flash","name":"Gemini 1.5 Flash","context":1000000}]}
+0|daniel-a | 12:21:58 AM [express] GET /api/projects 500 in 4ms :: {"error":"connect ECONNREFUSED 127.0.0.1:443"}
+0|daniel-a | 12:22:22 AM [express] POST /api/projects 500 in 3ms :: {"error":"connect ECONNREFUSED 127.0.0.1:443"}
+0|daniel-a | 12:22:26 AM [express] POST /api/projects 500 in 4ms :: {"error":"connect ECONNREFUSED 127.0.0.1:443"}
+0|daniel-a | 12:28:06 AM [express] serving on port 5000
