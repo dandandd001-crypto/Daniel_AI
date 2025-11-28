@@ -1,0 +1,415 @@
+untu@ip-172-31-72-58:/var/www/danielai/Daniel_AI$ pm2 logs daniel-ai
+[TAILING] Tailing last 15 lines for [daniel-ai] process (change the value with --lines option)
+/home/ubuntu/.pm2/logs/daniel-ai-error.log last 15 lines:
+0|daniel-a | (node:61450) Warning: Setting the NODE_TLS_REJECT_UNAUTHORIZED environment variable to '0' makes TLS connections and HTTPS requests insecure by disabling certificate verification.
+0|daniel-a | (Use `node --trace-warnings ...` to show where the warning was created)
+
+/home/ubuntu/.pm2/logs/daniel-ai-out.log last 15 lines:
+0|daniel-a | 2:41:04 AM [express] POST /api/projects 500 in 15ms :: {"error":"Unexpected server response: 400"}
+0|daniel-a | 2:41:28 AM [express] POST /api/projects 500 in 10ms :: {"error":"Unexpected server response: 400"}
+0|daniel-a | 2:41:31 AM [express] POST /api/projects 500 in 8ms :: {"error":"Unexpected server response: 400"}
+0|daniel-a | 2:41:33 AM [express] POST /api/projects 500 in 8ms :: {"error":"Unexpected server response: 400"}
+0|daniel-a | 2:41:59 AM [express] POST /api/projects 500 in 10ms :: {"error":"Unexpected server response: 400"}
+0|daniel-a | 2:42:04 AM [express] POST /api/projects 500 in 10ms :: {"error":"Unexpected server response: 400"}
+0|daniel-a | 2:42:06 AM [express] POST /api/projects 500 in 8ms :: {"error":"Unexpected server response: 400"}
+0|daniel-a |
+0|daniel-a | > rest-express@1.0.0 dev
+0|daniel-a | > NODE_ENV=development tsx server/index.ts
+0|daniel-a |
+0|daniel-a | 🚀 Server starting...
+0|daniel-a |    NODE_ENV: development
+0|daniel-a |    DATABASE_URL exists: true
+0|daniel-a | 2:44:29 AM [express] serving on port 5000
+
+0|daniel-ai  | DEBUG: POST /api/projects body: {
+0|daniel-ai  |   "name": "sjdbdha",
+0|daniel-ai  |   "description": "",
+0|daniel-ai  |   "provider": "google",
+0|daniel-ai  |   "model": "gemini-2.5-pro",
+0|daniel-ai  |   "apiKey": "AIzaSyA3pJSUNCW0jSmU9_IXu5553V3euEmb1wY"
+0|daniel-ai  | }
+0|daniel-ai  | DEBUG: Parsed data: {
+0|daniel-ai  |   "name": "sjdbdha",
+0|daniel-ai  |   "description": "",
+0|daniel-ai  |   "provider": "google",
+0|daniel-ai  |   "model": "gemini-2.5-pro",
+0|daniel-ai  |   "apiKey": "AIzaSyA3pJSUNCW0jSmU9_IXu5553V3euEmb1wY"
+0|daniel-ai  | }
+0|daniel-ai  | (node:61604) Warning: Setting the NODE_TLS_REJECT_UNAUTHORIZED environment variable to '0' makes TLS connections and HTTPS requests insecure by disabling certificate verification.
+0|daniel-ai  | (Use `node --trace-warnings ...` to show where the warning was created)
+0|daniel-ai  | DEBUG: Error in POST /api/projects: ErrorEvent {
+0|daniel-ai  |   Symbol(kTarget): WebSocket {
+0|daniel-ai  |     _events: [Object: null prototype] {
+0|daniel-ai  |       error: [Function],
+0|daniel-ai  |       message: [Function],
+0|daniel-ai  |       close: [Function],
+0|daniel-ai  |       open: [Function]
+0|daniel-ai  |     },
+0|daniel-ai  |     _eventsCount: 4,
+0|daniel-ai  |     _maxListeners: undefined,
+0|daniel-ai  |     _binaryType: 'arraybuffer',
+0|daniel-ai  |     _closeCode: 1006,
+0|daniel-ai  |     _closeFrameReceived: false,
+0|daniel-ai  |     _closeFrameSent: false,
+0|daniel-ai  |     _closeMessage: <Buffer >,
+0|daniel-ai  |     _closeTimer: null,
+0|daniel-ai  |     _errorEmitted: true,
+0|daniel-ai  |     _extensions: {},
+0|daniel-ai  |     _paused: false,
+0|daniel-ai  |     _protocol: '',
+0|daniel-ai  |     _readyState: 3,
+0|daniel-ai  |     _receiver: null,
+0|daniel-ai  |     _sender: null,
+0|daniel-ai  |     _socket: null,
+0|daniel-ai  |     _bufferedAmount: 0,
+0|daniel-ai  |     _isServer: false,
+0|daniel-ai  |     _redirects: 0,
+0|daniel-ai  |     _autoPong: true,
+0|daniel-ai  |     _url: 'wss://localhost/v2',
+0|daniel-ai  |     _req: ClientRequest {
+0|daniel-ai  |       _events: [Object: null prototype],
+0|daniel-ai  |       _eventsCount: 4,
+0|daniel-ai  |       _maxListeners: undefined,
+0|daniel-ai  |       outputData: [],
+0|daniel-ai  |       outputSize: 0,
+0|daniel-ai  |       writable: true,
+0|daniel-ai  |       destroyed: true,
+0|daniel-ai  |       _last: true,
+0|daniel-ai  |       chunkedEncoding: false,
+0|daniel-ai  |       shouldKeepAlive: true,
+0|daniel-ai  |       maxRequestsOnConnectionReached: false,
+0|daniel-ai  |       _defaultKeepAlive: true,
+0|daniel-ai  |       useChunkedEncodingByDefault: false,
+0|daniel-ai  |       sendDate: false,
+0|daniel-ai  |       _removedConnection: false,
+0|daniel-ai  |       _removedContLen: false,
+0|daniel-ai  |       _removedTE: false,
+0|daniel-ai  |       strictContentLength: false,
+0|daniel-ai  |       _contentLength: 0,
+0|daniel-ai  |       _hasBody: true,
+0|daniel-ai  |       _trailer: '',
+0|daniel-ai  |       finished: true,
+0|daniel-ai  |       _headerSent: true,
+0|daniel-ai  |       _closed: true,
+0|daniel-ai  |       _header: 'GET /v2 HTTP/1.1\r\n' +
+0|daniel-ai  |         'Sec-WebSocket-Version: 13\r\n' +
+0|daniel-ai  |         'Sec-WebSocket-Key: jW6xnwxYTjZG1YGPicIArw==\r\n' +
+0|daniel-ai  |         'Connection: Upgrade\r\n' +
+0|daniel-ai  |         'Upgrade: websocket\r\n' +
+0|daniel-ai  |         'Sec-WebSocket-Extensions: permessage-deflate; client_max_window_bits\r\n' +
+0|daniel-ai  |         'Host: localhost\r\n' +
+0|daniel-ai  |         '\r\n',
+0|daniel-ai  |       _keepAliveTimeout: 0,
+0|daniel-ai  |       _onPendingData: [Function: nop],
+0|daniel-ai  |       agent: undefined,
+0|daniel-ai  |       socketPath: undefined,
+0|daniel-ai  |       method: 'GET',
+0|daniel-ai  |       maxHeaderSize: undefined,
+0|daniel-ai  |       insecureHTTPParser: undefined,
+0|daniel-ai  |       joinDuplicateHeaders: undefined,
+0|daniel-ai  |       path: '/v2',
+0|daniel-ai  |       _ended: true,
+0|daniel-ai  |       res: [IncomingMessage],
+0|daniel-ai  |       aborted: true,
+0|daniel-ai  |       timeoutCb: null,
+0|daniel-ai  |       upgradeOrConnect: false,
+0|daniel-ai  |       parser: null,
+0|daniel-ai  |       maxHeadersCount: null,
+0|daniel-ai  |       reusedSocket: false,
+0|daniel-ai  |       host: 'localhost',
+0|daniel-ai  |       protocol: 'https:',
+0|daniel-ai  |       Symbol(shapeMode): false,
+0|daniel-ai  |       Symbol(kCapture): false,
+0|daniel-ai  |       Symbol(kBytesWritten): 0,
+0|daniel-ai  |       Symbol(kNeedDrain): false,
+0|daniel-ai  |       Symbol(corked): 0,
+0|daniel-ai  |       Symbol(kChunkedBuffer): [],
+0|daniel-ai  |       Symbol(kChunkedLength): 0,
+0|daniel-ai  |       Symbol(kSocket): [TLSSocket],
+0|daniel-ai  |       Symbol(kOutHeaders): [Object: null prototype],
+0|daniel-ai  |       Symbol(errored): null,
+0|daniel-ai  |       Symbol(kHighWaterMark): 65536,
+0|daniel-ai  |       Symbol(kRejectNonStandardBodyWrites): false,
+0|daniel-ai  |       Symbol(kUniqueHeaders): null,
+0|daniel-ai  |       Symbol(kAborted): true,
+0|daniel-ai  |       Symbol(kError): undefined
+0|daniel-ai  |     },
+0|daniel-ai  |     Symbol(shapeMode): false,
+0|daniel-ai  |     Symbol(kCapture): false
+0|daniel-ai  |   },
+0|daniel-ai  |   Symbol(kType): 'error',
+0|daniel-ai  |   Symbol(kError): Error: Unexpected server response: 400
+0|daniel-ai  |       at ClientRequest.<anonymous> (/var/www/danielai/Daniel_AI/node_modules/ws/lib/websocket.js:913:7)
+0|daniel-ai  |       at ClientRequest.emit (node:events:508:28)
+0|daniel-ai  |       at HTTPParser.parserOnIncomingClient (node:_http_client:780:27)
+0|daniel-ai  |       at HTTPParser.parserOnHeadersComplete (node:_http_common:123:17)
+0|daniel-ai  |       at TLSSocket.socketOnData (node:_http_client:615:22)
+0|daniel-ai  |       at TLSSocket.emit (node:events:508:28)
+0|daniel-ai  |       at addChunk (node:internal/streams/readable:559:12)
+0|daniel-ai  |       at readableAddChunkPushByteMode (node:internal/streams/readable:510:3)
+0|daniel-ai  |       at Readable.push (node:internal/streams/readable:390:5)
+0|daniel-ai  |       at TLSWrap.onStreamRead (node:internal/stream_base_commons:189:23),
+0|daniel-ai  |   Symbol(kMessage): 'Unexpected server response: 400'
+0|daniel-ai  | }
+0|daniel-ai  | 2:44:50 AM [express] POST /api/projects 500 in 44ms :: {"error":"Unexpected server response: 400"}
+0|daniel-ai  | 2:44:57 AM [express] GET /api/models 304 in 1ms :: {"openai":[{"id":"gpt-4o","name":"GPT-4o","context":128000},{"id":"gpt-4o-mini","name":"GPT-4o Mini","context":128000},{"id":"gpt-4-turbo","name":"GPT-4 Turbo","context":128000},{"id":"gpt-4","name":"GPT-4","context":8192},{"id":"o1","name":"o1 (Reasoning)","context":128000},{"id":"o1-mini","name":"o1 Mini","context":128000},{"id":"o1-preview","name":"o1 Preview","context":128000},{"id":"gpt-3.5-turbo","name":"GPT-3.5 Turbo","context":16384}],"anthropic":[{"id":"claude-sonnet-4-5","name":"Claude Sonnet 4.5","context":200000},{"id":"claude-sonnet-4","name":"Claude Sonnet 4","context":200000},{"id":"claude-opus-4","name":"Claude Opus 4","context":200000},{"id":"claude-3-5-sonnet-20241022","name":"Claude 3.5 Sonnet","context":200000},{"id":"claude-3-5-haiku-20241022","name":"Claude 3.5 Haiku","context":200000}],"google":[{"id":"gemini-2.5-pro","name":"Gemini 2.5 Pro","context":1000000},{"id":"gemini-2.5-flash","name":"Gemini 2.5 Flash","context":1000000},{"id":"gemini-2.0-flash","name":"Gemini 2.0 Flash","context":1000000},{"id":"gemini-1.5-pro","name":"Gemini 1.5 Pro","context":1000000},{"id":"gemini-1.5-flash","name":"Gemini 1.5 Flash","context":1000000}]}
+0|daniel-ai  | 2:44:57 AM [express] GET /api/projects 500 in 15ms :: {"error":"Unexpected server response: 400"}
+0|daniel-ai  | DEBUG: POST /api/projects body: {
+0|daniel-ai  |   "name": "zxb khz",
+0|daniel-ai  |   "description": "",
+0|daniel-ai  |   "provider": "openai",
+0|daniel-ai  |   "model": "gpt-4o",
+0|daniel-ai  |   "apiKey": "jyg xdbyujhdgb"
+0|daniel-ai  | }
+0|daniel-ai  | DEBUG: Parsed data: {
+0|daniel-ai  |   "name": "zxb khz",
+0|daniel-ai  |   "description": "",
+0|daniel-ai  |   "provider": "openai",
+0|daniel-ai  |   "model": "gpt-4o",
+0|daniel-ai  |   "apiKey": "jyg xdbyujhdgb"
+0|daniel-ai  | }
+0|daniel-ai  | DEBUG: Error in POST /api/projects: ErrorEvent {
+0|daniel-ai  |   Symbol(kTarget): WebSocket {
+0|daniel-ai  |     _events: [Object: null prototype] {
+0|daniel-ai  |       error: [Function],
+0|daniel-ai  |       message: [Function],
+0|daniel-ai  |       close: [Function],
+0|daniel-ai  |       open: [Function]
+0|daniel-ai  |     },
+0|daniel-ai  |     _eventsCount: 4,
+0|daniel-ai  |     _maxListeners: undefined,
+0|daniel-ai  |     _binaryType: 'arraybuffer',
+0|daniel-ai  |     _closeCode: 1006,
+0|daniel-ai  |     _closeFrameReceived: false,
+0|daniel-ai  |     _closeFrameSent: false,
+0|daniel-ai  |     _closeMessage: <Buffer >,
+0|daniel-ai  |     _closeTimer: null,
+0|daniel-ai  |     _errorEmitted: true,
+0|daniel-ai  |     _extensions: {},
+0|daniel-ai  |     _paused: false,
+0|daniel-ai  |     _protocol: '',
+0|daniel-ai  |     _readyState: 3,
+0|daniel-ai  |     _receiver: null,
+0|daniel-ai  |     _sender: null,
+0|daniel-ai  |     _socket: null,
+0|daniel-ai  |     _bufferedAmount: 0,
+0|daniel-ai  |     _isServer: false,
+0|daniel-ai  |     _redirects: 0,
+0|daniel-ai  |     _autoPong: true,
+0|daniel-ai  |     _url: 'wss://localhost/v2',
+0|daniel-ai  |     _req: ClientRequest {
+0|daniel-ai  |       _events: [Object: null prototype],
+0|daniel-ai  |       _eventsCount: 4,
+0|daniel-ai  |       _maxListeners: undefined,
+0|daniel-ai  |       outputData: [],
+0|daniel-ai  |       outputSize: 0,
+0|daniel-ai  |       writable: true,
+0|daniel-ai  |       destroyed: true,
+0|daniel-ai  |       _last: true,
+0|daniel-ai  |       chunkedEncoding: false,
+0|daniel-ai  |       shouldKeepAlive: true,
+0|daniel-ai  |       maxRequestsOnConnectionReached: false,
+0|daniel-ai  |       _defaultKeepAlive: true,
+0|daniel-ai  |       useChunkedEncodingByDefault: false,
+0|daniel-ai  |       sendDate: false,
+0|daniel-ai  |       _removedConnection: false,
+0|daniel-ai  |       _removedContLen: false,
+0|daniel-ai  |       _removedTE: false,
+0|daniel-ai  |       strictContentLength: false,
+0|daniel-ai  |       _contentLength: 0,
+0|daniel-ai  |       _hasBody: true,
+0|daniel-ai  |       _trailer: '',
+0|daniel-ai  |       finished: true,
+0|daniel-ai  |       _headerSent: true,
+0|daniel-ai  |       _closed: true,
+0|daniel-ai  |       _header: 'GET /v2 HTTP/1.1\r\n' +
+0|daniel-ai  |         'Sec-WebSocket-Version: 13\r\n' +
+0|daniel-ai  |         'Sec-WebSocket-Key: ZPfMBzVCElAHUm0DSoWgIg==\r\n' +
+0|daniel-ai  |         'Connection: Upgrade\r\n' +
+0|daniel-ai  |         'Upgrade: websocket\r\n' +
+0|daniel-ai  |         'Sec-WebSocket-Extensions: permessage-deflate; client_max_window_bits\r\n' +
+0|daniel-ai  |         'Host: localhost\r\n' +
+0|daniel-ai  |         '\r\n',
+0|daniel-ai  |       _keepAliveTimeout: 0,
+0|daniel-ai  |       _onPendingData: [Function: nop],
+0|daniel-ai  |       agent: undefined,
+0|daniel-ai  |       socketPath: undefined,
+0|daniel-ai  |       method: 'GET',
+0|daniel-ai  |       maxHeaderSize: undefined,
+0|daniel-ai  |       insecureHTTPParser: undefined,
+0|daniel-ai  |       joinDuplicateHeaders: undefined,
+0|daniel-ai  |       path: '/v2',
+0|daniel-ai  |       _ended: true,
+0|daniel-ai  |       res: [IncomingMessage],
+0|daniel-ai  |       aborted: true,
+0|daniel-ai  |       timeoutCb: null,
+0|daniel-ai  |       upgradeOrConnect: false,
+0|daniel-ai  |       parser: null,
+0|daniel-ai  |       maxHeadersCount: null,
+0|daniel-ai  |       reusedSocket: false,
+0|daniel-ai  |       host: 'localhost',
+0|daniel-ai  |       protocol: 'https:',
+0|daniel-ai  |       Symbol(shapeMode): false,
+0|daniel-ai  |       Symbol(kCapture): false,
+0|daniel-ai  |       Symbol(kBytesWritten): 0,
+0|daniel-ai  |       Symbol(kNeedDrain): false,
+0|daniel-ai  |       Symbol(corked): 0,
+0|daniel-ai  |       Symbol(kChunkedBuffer): [],
+0|daniel-ai  |       Symbol(kChunkedLength): 0,
+0|daniel-ai  |       Symbol(kSocket): [TLSSocket],
+0|daniel-ai  |       Symbol(kOutHeaders): [Object: null prototype],
+0|daniel-ai  |       Symbol(errored): null,
+0|daniel-ai  |       Symbol(kHighWaterMark): 65536,
+0|daniel-ai  |       Symbol(kRejectNonStandardBodyWrites): false,
+0|daniel-ai  |       Symbol(kUniqueHeaders): null,
+0|daniel-ai  |       Symbol(kAborted): true,
+0|daniel-ai  |       Symbol(kError): undefined
+0|daniel-ai  |     },
+0|daniel-ai  |     Symbol(shapeMode): false,
+0|daniel-ai  |     Symbol(kCapture): false
+0|daniel-ai  |   },
+0|daniel-ai  |   Symbol(kType): 'error',
+0|daniel-ai  |   Symbol(kError): Error: Unexpected server response: 400
+0|daniel-ai  |       at ClientRequest.<anonymous> (/var/www/danielai/Daniel_AI/node_modules/ws/lib/websocket.js:913:7)
+0|daniel-ai  |       at ClientRequest.emit (node:events:508:28)
+0|daniel-ai  |       at HTTPParser.parserOnIncomingClient (node:_http_client:780:27)
+0|daniel-ai  |       at HTTPParser.parserOnHeadersComplete (node:_http_common:123:17)
+0|daniel-ai  |       at TLSSocket.socketOnData (node:_http_client:615:22)
+0|daniel-ai  |       at TLSSocket.emit (node:events:508:28)
+0|daniel-ai  |       at addChunk (node:internal/streams/readable:559:12)
+0|daniel-ai  |       at readableAddChunkPushByteMode (node:internal/streams/readable:510:3)
+0|daniel-ai  |       at Readable.push (node:internal/streams/readable:390:5)
+0|daniel-ai  |       at TLSWrap.onStreamRead (node:internal/stream_base_commons:189:23),
+0|daniel-ai  |   Symbol(kMessage): 'Unexpected server response: 400'
+0|daniel-ai  | }
+0|daniel-ai  | 2:45:15 AM [express] POST /api/projects 500 in 13ms :: {"error":"Unexpected server response: 400"}
+0|daniel-ai  | DEBUG: POST /api/projects body: {
+0|daniel-ai  |   "name": "zxb khz",
+0|daniel-ai  |   "description": "",
+0|daniel-ai  |   "provider": "google",
+0|daniel-ai  |   "model": "gemini-2.5-pro",
+0|daniel-ai  |   "apiKey": "AIzaSyA3pJSUNCW0jSmU9_IXu5553V3euEmb1wY"
+0|daniel-ai  | }
+0|daniel-ai  | DEBUG: Parsed data: {
+0|daniel-ai  |   "name": "zxb khz",
+0|daniel-ai  |   "description": "",
+0|daniel-ai  |   "provider": "google",
+0|daniel-ai  |   "model": "gemini-2.5-pro",
+0|daniel-ai  |   "apiKey": "AIzaSyA3pJSUNCW0jSmU9_IXu5553V3euEmb1wY"
+0|daniel-ai  | }
+0|daniel-ai  | DEBUG: Error in POST /api/projects: ErrorEvent {
+0|daniel-ai  |   Symbol(kTarget): WebSocket {
+0|daniel-ai  |     _events: [Object: null prototype] {
+0|daniel-ai  |       error: [Function],
+0|daniel-ai  |       message: [Function],
+0|daniel-ai  |       close: [Function],
+0|daniel-ai  |       open: [Function]
+0|daniel-ai  |     },
+0|daniel-ai  |     _eventsCount: 4,
+0|daniel-ai  |     _maxListeners: undefined,
+0|daniel-ai  |     _binaryType: 'arraybuffer',
+0|daniel-ai  |     _closeCode: 1006,
+0|daniel-ai  |     _closeFrameReceived: false,
+0|daniel-ai  |     _closeFrameSent: false,
+0|daniel-ai  |     _closeMessage: <Buffer >,
+0|daniel-ai  |     _closeTimer: null,
+0|daniel-ai  |     _errorEmitted: true,
+0|daniel-ai  |     _extensions: {},
+0|daniel-ai  |     _paused: false,
+0|daniel-ai  |     _protocol: '',
+0|daniel-ai  |     _readyState: 3,
+0|daniel-ai  |     _receiver: null,
+0|daniel-ai  |     _sender: null,
+0|daniel-ai  |     _socket: null,
+0|daniel-ai  |     _bufferedAmount: 0,
+0|daniel-ai  |     _isServer: false,
+0|daniel-ai  |     _redirects: 0,
+0|daniel-ai  |     _autoPong: true,
+0|daniel-ai  |     _url: 'wss://localhost/v2',
+0|daniel-ai  |     _req: ClientRequest {
+0|daniel-ai  |       _events: [Object: null prototype],
+0|daniel-ai  |       _eventsCount: 4,
+0|daniel-ai  |       _maxListeners: undefined,
+0|daniel-ai  |       outputData: [],
+0|daniel-ai  |       outputSize: 0,
+0|daniel-ai  |       writable: true,
+0|daniel-ai  |       destroyed: true,
+0|daniel-ai  |       _last: true,
+0|daniel-ai  |       chunkedEncoding: false,
+0|daniel-ai  |       shouldKeepAlive: true,
+0|daniel-ai  |       maxRequestsOnConnectionReached: false,
+0|daniel-ai  |       _defaultKeepAlive: true,
+0|daniel-ai  |       useChunkedEncodingByDefault: false,
+0|daniel-ai  |       sendDate: false,
+0|daniel-ai  |       _removedConnection: false,
+0|daniel-ai  |       _removedContLen: false,
+0|daniel-ai  |       _removedTE: false,
+0|daniel-ai  |       strictContentLength: false,
+0|daniel-ai  |       _contentLength: 0,
+0|daniel-ai  |       _hasBody: true,
+0|daniel-ai  |       _trailer: '',
+0|daniel-ai  |       finished: true,
+0|daniel-ai  |       _headerSent: true,
+0|daniel-ai  |       _closed: true,
+0|daniel-ai  |       _header: 'GET /v2 HTTP/1.1\r\n' +
+0|daniel-ai  |         'Sec-WebSocket-Version: 13\r\n' +
+0|daniel-ai  |         'Sec-WebSocket-Key: stWWw7kEy/KsSNYifxtZog==\r\n' +
+0|daniel-ai  |         'Connection: Upgrade\r\n' +
+0|daniel-ai  |         'Upgrade: websocket\r\n' +
+0|daniel-ai  |         'Sec-WebSocket-Extensions: permessage-deflate; client_max_window_bits\r\n' +
+0|daniel-ai  |         'Host: localhost\r\n' +
+0|daniel-ai  |         '\r\n',
+0|daniel-ai  |       _keepAliveTimeout: 0,
+0|daniel-ai  |       _onPendingData: [Function: nop],
+0|daniel-ai  |       agent: undefined,
+0|daniel-ai  |       socketPath: undefined,
+0|daniel-ai  |       method: 'GET',
+0|daniel-ai  |       maxHeaderSize: undefined,
+0|daniel-ai  |       insecureHTTPParser: undefined,
+0|daniel-ai  |       joinDuplicateHeaders: undefined,
+0|daniel-ai  |       path: '/v2',
+0|daniel-ai  |       _ended: true,
+0|daniel-ai  |       res: [IncomingMessage],
+0|daniel-ai  |       aborted: true,
+0|daniel-ai  |       timeoutCb: null,
+0|daniel-ai  |       upgradeOrConnect: false,
+0|daniel-ai  |       parser: null,
+0|daniel-ai  |       maxHeadersCount: null,
+0|daniel-ai  |       reusedSocket: false,
+0|daniel-ai  |       host: 'localhost',
+0|daniel-ai  |       protocol: 'https:',
+0|daniel-ai  |       Symbol(shapeMode): false,
+0|daniel-ai  |       Symbol(kCapture): false,
+0|daniel-ai  |       Symbol(kBytesWritten): 0,
+0|daniel-ai  |       Symbol(kNeedDrain): false,
+0|daniel-ai  |       Symbol(corked): 0,
+0|daniel-ai  |       Symbol(kChunkedBuffer): [],
+0|daniel-ai  |       Symbol(kChunkedLength): 0,
+0|daniel-ai  |       Symbol(kSocket): [TLSSocket],
+0|daniel-ai  |       Symbol(kOutHeaders): [Object: null prototype],
+0|daniel-ai  |       Symbol(errored): null,
+0|daniel-ai  |       Symbol(kHighWaterMark): 65536,
+0|daniel-ai  |       Symbol(kRejectNonStandardBodyWrites): false,
+0|daniel-ai  |       Symbol(kUniqueHeaders): null,
+0|daniel-ai  |       Symbol(kAborted): true,
+0|daniel-ai  |       Symbol(kError): undefined
+0|daniel-ai  |     },
+0|daniel-ai  |     Symbol(shapeMode): false,
+0|daniel-ai  |     Symbol(kCapture): false
+0|daniel-ai  |   },
+0|daniel-ai  |   Symbol(kType): 'error',
+0|daniel-ai  |   Symbol(kError): Error: Unexpected server response: 400
+0|daniel-ai  |       at ClientRequest.<anonymous> (/var/www/danielai/Daniel_AI/node_modules/ws/lib/websocket.js:913:7)
+0|daniel-ai  |       at ClientRequest.emit (node:events:508:28)
+0|daniel-ai  |       at HTTPParser.parserOnIncomingClient (node:_http_client:780:27)
+0|daniel-ai  |       at HTTPParser.parserOnHeadersComplete (node:_http_common:123:17)
+0|daniel-ai  |       at TLSSocket.socketOnData (node:_http_client:615:22)
+0|daniel-ai  |       at TLSSocket.emit (node:events:508:28)
+0|daniel-ai  |       at addChunk (node:internal/streams/readable:559:12)
+0|daniel-ai  |       at readableAddChunkPushByteMode (node:internal/streams/readable:510:3)
+0|daniel-ai  |       at Readable.push (node:internal/streams/readable:390:5)
+0|daniel-ai  |       at TLSWrap.onStreamRead (node:internal/stream_base_commons:189:23),
+0|daniel-ai  |   Symbol(kMessage): 'Unexpected server response: 400'
+0|daniel-ai  | }
+0|daniel-ai  | 2:45:41 AM [express] POST /api/projects 500 in 10ms :: {"error":"Unexpected server response: 400"}
+
