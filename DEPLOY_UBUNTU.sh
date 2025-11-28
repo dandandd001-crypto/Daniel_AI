@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # DANIEL AI - Complete Fresh Ubuntu 24.04 Deployment Script
-# Usage: ./DEPLOY_UBUNTU.sh your-domain.com your-email@example.com
-# Run on a FRESH Ubuntu 24.04 instance as root or with sudo
+# Usage: sudo ./DEPLOY_UBUNTU.sh your-domain.com your-email@example.com
+# Run on a FRESH Ubuntu 24.04 instance with root/sudo access
 
 set -e
 
@@ -11,11 +11,16 @@ EMAIL=${2:-"admin@example.com"}
 PROJECT_DIR="/var/www/danielai"
 REPO_URL="https://github.com/dandandd001-crypto/Daniel_AI.git"
 
+if [ "$DOMAIN" = "danielai.example.com" ]; then
+  echo "❌ Error: Please provide your actual domain name"
+  echo "Usage: sudo $0 your-domain.com your-email@example.com"
+  exit 1
+fi
+
 echo "🚀 DANIEL AI - Complete Fresh Deployment"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "Domain: $DOMAIN"
 echo "Email: $EMAIL"
-echo "Project Dir: $PROJECT_DIR"
 echo ""
 
 # ============================================================================
@@ -42,13 +47,11 @@ echo "✅ npm $(npm -v)"
 echo "📦 Step 3: Installing PostgreSQL..."
 apt-get install -y postgresql postgresql-contrib
 
-echo "✅ Starting PostgreSQL..."
 systemctl start postgresql
 systemctl enable postgresql
 
-# Create database and user
 echo "🗄️  Creating database and user..."
-sudo -u postgres psql << EOF
+sudo -u postgres psql << 'SQL_EOF'
 DROP DATABASE IF EXISTS "daniel-ai_db";
 DROP USER IF EXISTS "daniel-ai_user";
 
@@ -58,18 +61,18 @@ CREATE DATABASE "daniel-ai_db" OWNER "daniel-ai_user";
 GRANT ALL PRIVILEGES ON DATABASE "daniel-ai_db" TO "daniel-ai_user";
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO "daniel-ai_user";
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO "daniel-ai_user";
-EOF
+SQL_EOF
 
 echo "✅ PostgreSQL ready"
 
 # ============================================================================
 # 4. PROJECT SETUP
 # ============================================================================
-echo "📂 Step 4: Setting up project directory..."
+echo "📂 Step 4: Setting up project..."
 mkdir -p $PROJECT_DIR
 cd $PROJECT_DIR
 
-rm -rf Daniel_AI projects
+rm -rf Daniel_AI projects 2>/dev/null || true
 mkdir -p projects
 
 echo "📥 Cloning repository..."
@@ -82,7 +85,7 @@ npm install
 echo "🔨 Building application..."
 npm run build
 
-echo "📋 Setting up database schema..."
+echo "📋 Setting up database..."
 DATABASE_URL="postgresql://daniel-ai_user:change_this_password_immediately@localhost:5432/daniel-ai_db" npm run db:push
 
 # ============================================================================
@@ -92,7 +95,7 @@ echo "📦 Step 5: Installing PM2..."
 npm install -g pm2
 
 echo "⚙️  Creating PM2 ecosystem config..."
-cat > ecosystem.config.cjs << 'EOF'
+cat > ecosystem.config.cjs << 'ECOSYSTEM_EOF'
 module.exports = {
   apps: [{
     name: 'daniel-ai',
@@ -108,22 +111,21 @@ module.exports = {
     error_file: '/var/log/daniel-ai-error.log',
     out_file: '/var/log/daniel-ai-out.log',
     log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
-    merge_logs: true,
     autorestart: true,
     watch: false
   }]
 };
-EOF
+ECOSYSTEM_EOF
 
-echo "🚀 Starting application with PM2..."
+echo "🚀 Starting application..."
 pm2 start ecosystem.config.cjs
 pm2 save --force
 
-echo "⚙️  Setting up PM2 startup on boot..."
-pm2 startup systemd -u root --hp /root | bash
+echo "⚙️  Setting up PM2 autostart..."
+pm2 startup systemd -u root --hp /root | bash || true
 
-echo "✅ Application started"
-sleep 2
+sleep 3
+pm2 list
 
 # ============================================================================
 # 6. NGINX INSTALLATION & CONFIGURATION
@@ -131,16 +133,19 @@ sleep 2
 echo "📦 Step 6: Installing Nginx..."
 apt-get install -y nginx
 
-echo "⚙️  Configuring Nginx reverse proxy..."
+echo "⚙️  Configuring Nginx..."
 cat > /etc/nginx/sites-available/$DOMAIN << 'NGINX_EOF'
 upstream daniel_ai {
-    server localhost:5000;
+    server 127.0.0.1:5000;
+    keepalive 64;
 }
 
 server {
     listen 80;
     listen [::]:80;
-    server_name SERVER_DOMAIN;
+    server_name DOMAIN_PLACEHOLDER;
+    
+    client_max_body_size 100M;
     
     location / {
         proxy_pass http://daniel_ai;
@@ -153,8 +158,6 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_cache_bypass $http_upgrade;
         
-        client_max_body_size 100M;
-        
         proxy_connect_timeout 60s;
         proxy_send_timeout 60s;
         proxy_read_timeout 60s;
@@ -162,28 +165,75 @@ server {
 }
 NGINX_EOF
 
-# Replace placeholder with actual domain
-sed -i "s/SERVER_DOMAIN/$DOMAIN/g" /etc/nginx/sites-available/$DOMAIN
+sed -i "s/DOMAIN_PLACEHOLDER/$DOMAIN/g" /etc/nginx/sites-available/$DOMAIN
 
-echo "🔗 Enabling Nginx site..."
 ln -sf /etc/nginx/sites-available/$DOMAIN /etc/nginx/sites-enabled/$DOMAIN
 rm -f /etc/nginx/sites-enabled/default
 
-echo "✅ Testing Nginx configuration..."
 nginx -t
-
-echo "🔄 Reloading Nginx..."
 systemctl restart nginx
 systemctl enable nginx
+
+echo "✅ Nginx configured"
 
 # ============================================================================
 # 7. SSL/TLS WITH CERTBOT
 # ============================================================================
-echo "📦 Step 7: Installing Certbot..."
+echo "📦 Step 7: Installing SSL certificate..."
 apt-get install -y certbot python3-certbot-nginx
 
-echo "🔒 Requesting SSL certificate..."
-certbot certonly --nginx --non-interactive --agree-tos --email $EMAIL -d $DOMAIN
+certbot certonly --standalone --non-interactive --agree-tos --email $EMAIL -d $DOMAIN --preferred-challenges http || echo "⚠️  Certificate setup - you may need to run manually"
+
+# Update Nginx for HTTPS
+cat > /etc/nginx/sites-available/$DOMAIN << 'NGINX_HTTPS_EOF'
+upstream daniel_ai {
+    server 127.0.0.1:5000;
+    keepalive 64;
+}
+
+server {
+    listen 80;
+    listen [::]:80;
+    server_name DOMAIN_PLACEHOLDER;
+    return 301 https://$server_name$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name DOMAIN_PLACEHOLDER;
+    
+    ssl_certificate /etc/letsencrypt/live/DOMAIN_PLACEHOLDER/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/DOMAIN_PLACEHOLDER/privkey.pem;
+    
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers HIGH:!aNULL:!MD5;
+    ssl_prefer_server_ciphers on;
+    
+    client_max_body_size 100M;
+    
+    location / {
+        proxy_pass http://daniel_ai;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+        
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 60s;
+    }
+}
+NGINX_HTTPS_EOF
+
+sed -i "s/DOMAIN_PLACEHOLDER/$DOMAIN/g" /etc/nginx/sites-available/$DOMAIN
+
+nginx -t
+systemctl reload nginx
 
 echo "✅ SSL certificate installed"
 
@@ -206,34 +256,22 @@ echo "✅ Firewall configured"
 # 9. VERIFICATION
 # ============================================================================
 echo ""
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "✅ DEPLOYMENT COMPLETE!"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
-echo "📋 Application Status:"
-pm2 list
-echo ""
-echo "📊 Recent Logs:"
-pm2 logs daniel-ai --lines 20
-echo ""
-echo "🌐 Your app is now available at:"
-echo "   http://$DOMAIN  (redirects to https)"
+echo "🌐 Your app is now running at:"
 echo "   https://$DOMAIN"
 echo ""
-echo "📝 Useful Commands:"
-echo "   pm2 status                 # Check process status"
-echo "   pm2 logs daniel-ai         # View logs"
-echo "   pm2 restart daniel-ai      # Restart app"
-echo "   systemctl restart nginx    # Restart web server"
+echo "📊 Check status:"
+echo "   pm2 status"
+echo "   pm2 logs daniel-ai"
 echo ""
-echo "🗄️  Database:"
+echo "🗄️  Database credentials:"
 echo "   Host: localhost"
 echo "   User: daniel-ai_user"
 echo "   Password: change_this_password_immediately"
 echo "   Database: daniel-ai_db"
 echo ""
-echo "⚠️  SECURITY NOTES:"
-echo "   1. Change the database password immediately!"
-echo "   2. Keep SSH keys secure"
-echo "   3. Monitor logs regularly: pm2 logs"
+echo "⚠️  IMPORTANT: Change the database password immediately!"
 echo ""
