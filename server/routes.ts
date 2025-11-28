@@ -51,8 +51,11 @@ export async function registerRoutes(
   // Create project
   app.post("/api/projects", async (req, res) => {
     try {
+      console.error("DEBUG: POST /api/projects body:", JSON.stringify(req.body, null, 2));
       const data = insertProjectSchema.parse(req.body);
+      console.error("DEBUG: Parsed data:", JSON.stringify(data, null, 2));
       const project = await storage.createProject(data);
+      console.error("DEBUG: Project created:", project.id);
       
       // Create default chat
       await storage.createChat({
@@ -62,10 +65,12 @@ export async function registerRoutes(
       
       res.json({ ...project, apiKey: "***" });
     } catch (error: any) {
+      console.error("DEBUG: Error in POST /api/projects:", error);
       if (error instanceof z.ZodError) {
+        console.error("DEBUG: Zod validation error:", error.errors);
         return res.status(400).json({ error: error.errors });
       }
-      res.status(500).json({ error: error.message });
+      res.status(500).json({ error: error.message || error.toString() });
     }
   });
 
