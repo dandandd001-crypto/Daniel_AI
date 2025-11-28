@@ -1,0 +1,119 @@
+buntu@ip-172-31-72-58:/var/www/danielai/Daniel_AI$ curl http://localhost:5000/api/projects
+{"error":"connect ECONNREFUSED 127.0.0.1:443"}ubuntu@ip-172-31-72-58:/var/www/danielai/Daniel_AI$
+ubuntu@ip-172-31-72-58:/var/www/danielai/Daniel_AI$ curl http://localhost:5000/api/projects
+{"error":"connect ECONNREFUSED 127.0.0.1:443"}ubuntu@ip-172-31-72-58:/var/www/danielai/Daniel_AI$ cd /var/www/danielai/Daniel_AI
+-bash: cd: /var/ww: No such file or directory
+ubuntu@ip-172-31-72-58:/var/www/danielai/Daniel_AI$ pm2 kill
+[PM2] Applying action deleteProcessId on app [all](ids: [ 0 ])
+[PM2] [daniel-ai](0) ✓
+[PM2] [v] All Applications Stopped
+[PM2] [v] PM2 Daemon Stopped
+ubuntu@ip-172-31-72-58:/var/www/danielai/Daniel_AI$ npm run db:push
+
+> rest-express@1.0.0 db:push
+> drizzle-kit push
+
+No config path provided, using default 'drizzle.config.ts'
+Reading config file '/var/www/danielai/Daniel_AI/drizzle.config.ts'
+Using 'pg' driver for database querying
+[⣷] Pulling schema from database...
+error: password authentication failed for user "daniel-ai_user"
+    at /var/www/danielai/Daniel_AI/node_modules/pg-pool/index.js:45:11
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async Object.query (/var/www/danielai/Daniel_AI/node_modules/drizzle-kit/bin.cjs:80601:26)
+    at async fromDatabase2 (/var/www/danielai/Daniel_AI/node_modules/drizzle-kit/bin.cjs:19253:25) {
+  length: 110,
+  severity: 'FATAL',
+  code: '28P01',
+  detail: undefined,
+  hint: undefined,
+  position: undefined,
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'auth.c',
+  line: '331',
+  routine: 'auth_failed'
+}
+ubuntu@ip-172-31-72-58:/var/www/danielai/Daniel_AI$ cat drizzle.config.ts | grep -i password
+ubuntu@ip-172-31-72-58:/var/www/danielai/Daniel_AI$ cat drizzle.config.ts | grep -i password
+ubuntu@ip-172-31-72-58:/var/www/danielai/Daniel_AI$ cat ecosystem.config.cjs | grep DATABASE_URL
+      DATABASE_URL: 'postgresql://daniel-ai_user:change_this_password_immediately@localhost:5432/daniel-ai_db',
+ubuntu@ip-172-31-72-58:/var/www/danielai/Daniel_AI$ sudo -u postgres psql -c "ALTER USER \"daniel-ai_user\" WITH PASSWORD 'change_this_password_immediately';"
+ALTER ROLE
+ubuntu@ip-172-31-72-58:/var/www/danielai/Daniel_AI$ npm run db:push
+
+> rest-express@1.0.0 db:push
+> drizzle-kit push
+
+No config path provided, using default 'drizzle.config.ts'
+Reading config file '/var/www/danielai/Daniel_AI/drizzle.config.ts'
+Using 'pg' driver for database querying
+[⣷] Pulling schema from database...
+error: password authentication failed for user "daniel-ai_user"
+    at /var/www/danielai/Daniel_AI/node_modules/pg-pool/index.js:45:11
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async Object.query (/var/www/danielai/Daniel_AI/node_modules/drizzle-kit/bin.cjs:80601:26)
+    at async fromDatabase2 (/var/www/danielai/Daniel_AI/node_modules/drizzle-kit/bin.cjs:19253:25) {
+  length: 110,
+  severity: 'FATAL',
+  code: '28P01',
+  detail: undefined,
+  hint: undefined,
+  position: undefined,
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'auth.c',
+  line: '331',
+  routine: 'auth_failed'
+}
+[✓] Pulling schema from database...
+[i] No changes detected
+ubuntu@ip-172-31-72-58:/var/www/danielai/Daniel_AI$ npm run build
+
+> rest-express@1.0.0 buildsh
+> tsx script/build.ts
+
+building client...vided, using default 'drizzle.config.ts'
+vite v7.1.12 building for production...Daniel_AI/drizzle.config.ts✓ 2247 modules transformed.
+rendering chunks (1)...[meta-images] no Replit deployment domain found, skipping meta tag updates
+../dist/public/index.html                   1.48 kB │ gzip:   0.60 kB
+../dist/public/assets/index-BS8vZDwG.css  102.90 kB │ gzip:  16.83 kB
+../dist/public/assets/index-BkIYCJLA.js   615.77 kB │ gzip: 191.46 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 7.95s
+building server...
+ubuntu@ip-172-31-72-58:/var/www/danielai/Daniel_AI$ pm2 kill
+[PM2] Spawning PM2 daemon with pm2_home=/home/ubuntu/.pm2
+[PM2] PM2 Successfully daemonized
+[PM2][WARN] No process found
+[PM2] [v] All Applications Stopped
+[PM2] [v] PM2 Daemon Stopped
+ubuntu@ip-172-31-72-58:/var/www/danielai/Daniel_AI$ pm2 start ecosystem.config.cjs
+[PM2] Spawning PM2 daemon with pm2_home=/home/ubuntu/.pm2
+[PM2] PM2 Successfully daemonized
+[PM2][WARN] Applications daniel-ai not running, starting...
+[PM2] App [daniel-ai] launched (1 instances)
+┌────┬────────────────────┬──────────┬──────┬───────────┬──────────┬──────────┐
+│ id │ name               │ mode     │ ↺    │ status    │ cpu      │ memory   │
+├────┼────────────────────┼──────────┼──────┼───────────┼──────────┼──────────┤
+│ 0  │ daniel-ai          │ cluster  │ 0    │ online    │ 0%       │ 46.9mb   │
+└────┴────────────────────┴──────────┴──────┴───────────┴──────────┴──────────┘
+ubuntu@ip-172-31-72-58:/var/www/danielai/Daniel_AI$ sleep 2
+ubuntu@ip-172-31-72-58:/var/www/danielai/Daniel_AI$ curl http://localhost:5000/api/projects
+ubuntu@ip-172-31-72-58:/var/www/danielai/Daniel_AI$
