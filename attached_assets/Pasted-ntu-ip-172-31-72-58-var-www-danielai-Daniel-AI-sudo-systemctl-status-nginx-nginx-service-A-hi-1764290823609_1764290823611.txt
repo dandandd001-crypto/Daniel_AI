@@ -1,0 +1,81 @@
+ntu@ip-172-31-72-58:/var/www/danielai/Daniel_AI$ sudo systemctl status nginx
+● nginx.service - A high performance web server and a reverse proxy server
+     Loaded: loaded (/usr/lib/systemd/system/nginx.service; enabled; preset: enabled)
+     Active: active (running) since Thu 2025-11-27 15:37:47 UTC; 9h ago
+       Docs: man:nginx(8)
+    Process: 50935 ExecStartPre=/usr/sbin/nginx -t -q -g daemon on; master_process on; (code=exited, status=0/SUCCESS)
+    Process: 50936 ExecStart=/usr/sbin/nginx -g daemon on; master_process on; (code=exited, status=0/SUCCESS)
+   Main PID: 50938 (nginx)
+      Tasks: 3 (limit: 1008)
+     Memory: 2.6M (peak: 4.1M)
+        CPU: 65ms
+     CGroup: /system.slice/nginx.service
+             ├─50938 "nginx: master process /usr/sbin/nginx -g daemon on; master_process on;"
+             ├─50939 "nginx: worker process"
+             └─50940 "nginx: worker process"
+
+Nov 27 15:37:47 ip-172-31-72-58 systemd[1]: Starting nginx.service - A high performance web server and a reverse proxy server...
+Nov 27 15:37:47 ip-172-31-72-58 systemd[1]: Started nginx.service - A high performance web server and a reverse proxy server.
+ubuntu@ip-172-31-72-58:/var/www/danielai/Daniel_AI$ sudo ss -tuln | grep 80
+tcp   LISTEN 0      511              0.0.0.0:80         0.0.0.0:*
+ubuntu@ip-172-31-72-58:/var/www/danielai/Daniel_AI$ sudo ss -tuln | grep 5000
+tcp   LISTEN 0      511              0.0.0.0:5000       0.0.0.0:*
+ubuntu@ip-172-31-72-58:/var/www/danielai/Daniel_AI$ curl -v http://localhost
+* Host localhost:80 was resolved.
+* IPv6: ::1
+* IPv4: 127.0.0.1
+*   Trying [::1]:80...
+* connect to ::1 port 80 from ::1 port 33354 failed: Connection refused
+*   Trying 127.0.0.1:80...
+* Connected to localhost (127.0.0.1) port 80
+> GET / HTTP/1.1
+> Host: localhost
+> User-Agent: curl/8.5.0
+> Accept: */*
+>
+< HTTP/1.1 200 OK
+< Server: nginx/1.24.0 (Ubuntu)
+< Date: Fri, 28 Nov 2025 00:45:59 GMT
+< Content-Type: text/html; charset=UTF-8
+< Content-Length: 1479
+< Connection: keep-alive
+< X-Powered-By: Express
+< Accept-Ranges: bytes
+< Cache-Control: public, max-age=0
+< Last-Modified: Fri, 28 Nov 2025 00:39:50 GMT
+< ETag: W/"5c7-19ac7e6e7fc"
+<
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+
+    <meta property="og:title" content="DANIEL AI DEV" />
+    <meta property="og:description" content="Your personal AI coding assistant. Build anything with unlimited AI power." />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="https://replit.com/public/images/opengraph.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="@replit" />
+    <meta name="twitter:title" content="DANIEL AI DEV" />
+    <meta name="twitter:description" content="Your personal AI coding assistant. Build anything with unlimited AI power." />
+    <meta name="twitter:image" content="https://replit.com/public/images/opengraph.png" />
+
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <script type="module" crossorigin src="/assets/index-BkIYCJLA.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-BS8vZDwG.css">
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+* Connection #0 to host localhost left intact
+</html>ubuntu@ip-172-31-72-58:/var/www/danielai/Daniel_AI$ sudo tail -20 /var/log/nginx/error.log
+2025/11/28 00:05:23 [error] 50939#50939: *88 connect() failed (111: Connection refused) while connecting to upstream, client: 167.86.95.210, server: danielai.mooo.com, request: "GET /.env HTTP/1.1", upstream: "http://127.0.0.1:5000/.env", host: "13.222.109.97"
+2025/11/28 00:13:21 [error] 50939#50939: *90 connect() failed (111: Connection refused) while connecting to upstream, client: 102.88.114.182, server: danielai.mooo.com, request: "GET /favicon.ico HTTP/1.1", upstream: "http://127.0.0.1:5000/favicon.ico", host: "danielai.mooo.com", referrer: "http://danielai.mooo.com/"
+2025/11/28 00:38:17 [error] 50940#50940: *145 connect() failed (111: Connection refused) while connecting to upstream, client: 83.142.209.120, server: danielai.mooo.com, request: "GET /cgi-bin/luci/;stok=/locale HTTP/1.1", upstream: "http://127.0.0.1:5000/cgi-bin/luci/;stok=/locale", host: "13.222.109.97:80"
+ubuntu@ip-172-31-72-58:/var/www/danielai/Daniel_AI$ sudo nginx -t
+nginx: the configuration file /etc/nginx/nginx.conf syntax is ok
+ubuntu@ip-172-31-72-58:/var/www/danielai/Daniel_AI$
