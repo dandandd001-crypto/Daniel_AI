@@ -3,6 +3,16 @@ import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
 
+// Log environment for debugging
+console.log("🚀 Server starting...");
+console.log("   NODE_ENV:", process.env.NODE_ENV);
+console.log("   DATABASE_URL exists:", !!process.env.DATABASE_URL);
+if (!process.env.DATABASE_URL) {
+  console.error("❌ FATAL: DATABASE_URL not set!");
+  console.error("   This is required for the app to work");
+  process.exit(1);
+}
+
 const app = express();
 const httpServer = createServer(app);
 
