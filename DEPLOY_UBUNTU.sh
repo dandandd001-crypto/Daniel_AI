@@ -1,171 +1,149 @@
 #!/bin/bash
 
-################################################################################
-# DANIEL AI DEV - Ubuntu Deployment Script
-# 
-# Usage: bash DEPLOY_UBUNTU.sh <domain> <email>
-# Example: bash DEPLOY_UBUNTU.sh app.example.com admin@example.com
-#
-# This script deploys the DANIEL AI application to a fresh Ubuntu 20.04+ server
-# Requirements:
-# - Ubuntu 20.04 LTS or newer
-# - Root/sudo access
-# - A domain name pointing to this server's IP
-################################################################################
+# DANIEL AI - Complete Fresh Ubuntu 24.04 Deployment Script
+# Usage: ./DEPLOY_UBUNTU.sh your-domain.com your-email@example.com
+# Run on a FRESH Ubuntu 24.04 instance as root or with sudo
 
 set -e
 
-# Colors for output
-GREEN='\033[0;32m'
-BLUE='\033[0;34m'
-YELLOW='\033[1;33m'
-RED='\033[0;31m'
-NC='\033[0m' # No Color
+DOMAIN=${1:-"danielai.example.com"}
+EMAIL=${2:-"admin@example.com"}
+PROJECT_DIR="/var/www/danielai"
+REPO_URL="https://github.com/dandandd001-crypto/Daniel_AI.git"
 
-# Configuration
-DOMAIN="${1:-app.example.com}"
-EMAIL="${2:-admin@example.com}"
-APP_NAME="daniel-ai"
-APP_DIR="/var/www/danielai/Daniel_AI"
-APP_USER="ubuntu"
-APP_PORT="5000"
-DB_NAME="${APP_NAME}_db"
-DB_USER="${APP_NAME}_user"
+echo "🚀 DANIEL AI - Complete Fresh Deployment"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "Domain: $DOMAIN"
+echo "Email: $EMAIL"
+echo "Project Dir: $PROJECT_DIR"
+echo ""
 
-# Validate inputs
-if [ "$DOMAIN" = "app.example.com" ]; then
-  echo -e "${RED}❌ Error: Please provide a real domain name${NC}"
-  echo "Usage: $0 <domain> <email>"
-  exit 1
-fi
+# ============================================================================
+# 1. SYSTEM UPDATES
+# ============================================================================
+echo "📦 Step 1: Updating system packages..."
+apt-get update
+apt-get upgrade -y
+apt-get install -y curl wget git build-essential
 
-echo -e "${BLUE}🚀 Starting DANIEL AI deployment to ${DOMAIN}${NC}"
+# ============================================================================
+# 2. NODE.JS INSTALLATION
+# ============================================================================
+echo "📦 Step 2: Installing Node.js 22..."
+curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
+apt-get install -y nodejs
 
-# Update system
-echo -e "${YELLOW}📦 Updating system packages...${NC}"
-sudo apt-get update
-sudo apt-get upgrade -y
-sudo apt-get install -y curl wget git build-essential
+echo "✅ Node.js $(node -v)"
+echo "✅ npm $(npm -v)"
 
-# Install Node.js
-if ! command -v node &> /dev/null; then
-  echo -e "${YELLOW}📦 Installing Node.js 20...${NC}"
-  curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
-  sudo apt-get install -y nodejs npm
-fi
+# ============================================================================
+# 3. POSTGRESQL INSTALLATION
+# ============================================================================
+echo "📦 Step 3: Installing PostgreSQL..."
+apt-get install -y postgresql postgresql-contrib
 
-# Install PostgreSQL
-if ! command -v psql &> /dev/null; then
-  echo -e "${YELLOW}📦 Installing PostgreSQL...${NC}"
-  sudo apt-get install -y postgresql postgresql-contrib postgresql-client
-  sudo systemctl enable postgresql
-  sudo systemctl start postgresql
-fi
+echo "✅ Starting PostgreSQL..."
+systemctl start postgresql
+systemctl enable postgresql
 
-# Create app user
-if ! id "$APP_USER" &>/dev/null; then
-  echo -e "${YELLOW}👤 Creating application user...${NC}"
-  sudo useradd -m -s /bin/bash "$APP_USER"
-fi
+# Create database and user
+echo "🗄️  Creating database and user..."
+sudo -u postgres psql << EOF
+DROP DATABASE IF EXISTS "daniel-ai_db";
+DROP USER IF EXISTS "daniel-ai_user";
 
-# Create app directory
-echo -e "${YELLOW}📁 Setting up application directory...${NC}"
-sudo mkdir -p "$APP_DIR"
-sudo chown "$APP_USER:$APP_USER" "$APP_DIR"
+CREATE USER "daniel-ai_user" WITH PASSWORD 'change_this_password_immediately';
+CREATE DATABASE "daniel-ai_db" OWNER "daniel-ai_user";
 
-# Setup database
-echo -e "${YELLOW}🗄️  Setting up PostgreSQL database...${NC}"
-sudo -u postgres psql <<EOF
-DROP DATABASE IF EXISTS "$DB_NAME";
-DROP USER IF EXISTS "$DB_USER";
-CREATE DATABASE "$DB_NAME";
-CREATE USER "$DB_USER" WITH PASSWORD 'change_this_password_immediately';
-ALTER ROLE "$DB_USER" SET client_encoding TO 'utf8';
-ALTER ROLE "$DB_USER" SET default_transaction_isolation TO 'read committed';
-ALTER ROLE "$DB_USER" SET default_transaction_deferrable TO on;
-ALTER ROLE "$DB_USER" SET default_transaction_level TO 'read committed';
-GRANT ALL PRIVILEGES ON DATABASE "$DB_NAME" TO "$DB_USER";
-ALTER DATABASE "$DB_NAME" OWNER TO "$DB_USER";
+GRANT ALL PRIVILEGES ON DATABASE "daniel-ai_db" TO "daniel-ai_user";
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO "daniel-ai_user";
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO "daniel-ai_user";
 EOF
 
-# Download and setup application
-echo -e "${YELLOW}📥 Setting up application...${NC}"
-cd "$APP_DIR"
+echo "✅ PostgreSQL ready"
 
-# Get the latest build (replace with your actual deployment method)
-# Option 1: Clone from GitHub
-# sudo -u "$APP_USER" git clone <your-repo-url> .
+# ============================================================================
+# 4. PROJECT SETUP
+# ============================================================================
+echo "📂 Step 4: Setting up project directory..."
+mkdir -p $PROJECT_DIR
+cd $PROJECT_DIR
 
-# Option 2: If you have a built package
-# wget -O app.tar.gz <your-app-url>
-# sudo tar -xzf app.tar.gz
+rm -rf Daniel_AI projects
+mkdir -p projects
 
-# For this example, we assume files are already present
-if [ ! -f "package.json" ]; then
-  echo -e "${RED}❌ Error: No application found in $APP_DIR${NC}"
-  echo "Please upload your application files first"
-  exit 1
-fi
+echo "📥 Cloning repository..."
+git clone $REPO_URL Daniel_AI
+cd Daniel_AI
 
-# Install dependencies
-echo -e "${YELLOW}📚 Installing npm dependencies...${NC}"
-sudo -u "$APP_USER" npm install --legacy-peer-deps
+echo "📥 Installing npm dependencies..."
+npm install
 
-# Build application
-if grep -q '"build"' package.json; then
-  echo -e "${YELLOW}🔨 Building application...${NC}"
-  sudo -u "$APP_USER" npm run build
-fi
+echo "🔨 Building application..."
+npm run build
 
-# Install PM2
-echo -e "${YELLOW}🎯 Installing PM2 process manager...${NC}"
-sudo npm install -g pm2
+echo "📋 Setting up database schema..."
+DATABASE_URL="postgresql://daniel-ai_user:change_this_password_immediately@localhost:5432/daniel-ai_db" npm run db:push
 
-# Create ecosystem config file (.cjs because package.json uses "type": "module")
-echo -e "${YELLOW}📝 Creating PM2 ecosystem config...${NC}"
-cd "$APP_DIR"
-cat > ecosystem.config.cjs << ECOSYSTEM_EOF
+# ============================================================================
+# 5. PM2 INSTALLATION & CONFIGURATION
+# ============================================================================
+echo "📦 Step 5: Installing PM2..."
+npm install -g pm2
+
+echo "⚙️  Creating PM2 ecosystem config..."
+cat > ecosystem.config.cjs << 'EOF'
 module.exports = {
   apps: [{
-    name: '$APP_NAME',
+    name: 'daniel-ai',
     script: 'dist/index.cjs',
     instances: 1,
+    exec_mode: 'fork',
     env: {
-      DATABASE_URL: 'postgresql://$DB_USER:change_this_password_immediately@localhost:5432/$DB_NAME',
       NODE_ENV: 'production',
       PORT: '5000',
-      PROJECTS_DIR: '/var/www/danielai/projects'
-    }
+      PROJECTS_DIR: '/var/www/danielai/projects',
+      DATABASE_URL: 'postgresql://daniel-ai_user:change_this_password_immediately@localhost:5432/daniel-ai_db'
+    },
+    error_file: '/var/log/daniel-ai-error.log',
+    out_file: '/var/log/daniel-ai-out.log',
+    log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
+    merge_logs: true,
+    autorestart: true,
+    watch: false
   }]
 };
-ECOSYSTEM_EOF
+EOF
 
-# Start application with PM2 using ecosystem config
-echo -e "${YELLOW}▶️  Starting application...${NC}"
-sudo pm2 kill
-sudo -u "$APP_USER" pm2 start ecosystem.config.cjs
-sudo -u "$APP_USER" pm2 startup
-sudo -u "$APP_USER" pm2 save
+echo "🚀 Starting application with PM2..."
+pm2 start ecosystem.config.cjs
+pm2 save --force
 
-# Install and configure Nginx
-echo -e "${YELLOW}🌐 Installing and configuring Nginx...${NC}"
-sudo apt-get install -y nginx
+echo "⚙️  Setting up PM2 startup on boot..."
+pm2 startup systemd -u root --hp /root | bash
 
-# Create Nginx configuration
-sudo tee /etc/nginx/sites-available/$DOMAIN > /dev/null <<'NGINX_EOF'
-upstream daniel_app {
+echo "✅ Application started"
+sleep 2
+
+# ============================================================================
+# 6. NGINX INSTALLATION & CONFIGURATION
+# ============================================================================
+echo "📦 Step 6: Installing Nginx..."
+apt-get install -y nginx
+
+echo "⚙️  Configuring Nginx reverse proxy..."
+cat > /etc/nginx/sites-available/$DOMAIN << 'NGINX_EOF'
+upstream daniel_ai {
     server localhost:5000;
-    keepalive 64;
 }
 
 server {
     listen 80;
-    server_name DOMAIN_PLACEHOLDER;
-
-    client_max_body_size 100M;
-
+    listen [::]:80;
+    server_name SERVER_DOMAIN;
+    
     location / {
-        proxy_pass http://daniel_app;
+        proxy_pass http://daniel_ai;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
@@ -174,112 +152,88 @@ server {
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_cache_bypass $http_upgrade;
-        proxy_read_timeout 86400s;
-        proxy_send_timeout 86400s;
-    }
-
-    location /ws {
-        proxy_pass http://daniel_app;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
-        proxy_set_header Host $host;
-        proxy_read_timeout 86400s;
+        
+        client_max_body_size 100M;
+        
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 60s;
     }
 }
 NGINX_EOF
 
-# Replace domain placeholder
-sudo sed -i "s/DOMAIN_PLACEHOLDER/$DOMAIN/g" /etc/nginx/sites-available/$DOMAIN
+# Replace placeholder with actual domain
+sed -i "s/SERVER_DOMAIN/$DOMAIN/g" /etc/nginx/sites-available/$DOMAIN
 
-# Enable Nginx site
-sudo ln -sf /etc/nginx/sites-available/$DOMAIN /etc/nginx/sites-enabled/$DOMAIN
+echo "🔗 Enabling Nginx site..."
+ln -sf /etc/nginx/sites-available/$DOMAIN /etc/nginx/sites-enabled/$DOMAIN
+rm -f /etc/nginx/sites-enabled/default
 
-# Remove default Nginx site
-sudo rm -f /etc/nginx/sites-enabled/default
+echo "✅ Testing Nginx configuration..."
+nginx -t
 
-# Test Nginx configuration
-echo -e "${YELLOW}✓ Testing Nginx configuration...${NC}"
-sudo nginx -t
+echo "🔄 Reloading Nginx..."
+systemctl restart nginx
+systemctl enable nginx
 
-# Reload Nginx
-sudo systemctl enable nginx
-sudo systemctl reload nginx
+# ============================================================================
+# 7. SSL/TLS WITH CERTBOT
+# ============================================================================
+echo "📦 Step 7: Installing Certbot..."
+apt-get install -y certbot python3-certbot-nginx
 
-# Install SSL certificate with Let's Encrypt
-echo -e "${YELLOW}🔒 Setting up SSL certificate...${NC}"
-sudo apt-get install -y certbot python3-certbot-nginx
+echo "🔒 Requesting SSL certificate..."
+certbot certonly --nginx --non-interactive --agree-tos --email $EMAIL -d $DOMAIN
 
-sudo certbot --nginx \
-  -d "$DOMAIN" \
-  --non-interactive \
-  --agree-tos \
-  -m "$EMAIL" \
-  --redirect \
-  --hsts \
-  2>/dev/null || echo "⚠️  SSL setup skipped - configure manually if needed"
+echo "✅ SSL certificate installed"
 
-# Setup firewall
-echo -e "${YELLOW}🔥 Configuring firewall...${NC}"
-sudo apt-get install -y ufw
-sudo ufw default deny incoming
-sudo ufw default allow outgoing
-sudo ufw allow 22/tcp
-sudo ufw allow 80/tcp
-sudo ufw allow 443/tcp
-sudo ufw --force enable
+# ============================================================================
+# 8. FIREWALL CONFIGURATION
+# ============================================================================
+echo "🔥 Step 8: Configuring firewall..."
+apt-get install -y ufw
 
-# Create monitoring script
-echo -e "${YELLOW}📊 Setting up monitoring...${NC}"
-sudo tee /usr/local/bin/monitor-daniel-ai > /dev/null <<'MONITOR_EOF'
-#!/bin/bash
-# Monitor script for DANIEL AI
-# Run: monitor-daniel-ai
-# Displays app status and logs
+ufw default deny incoming
+ufw default allow outgoing
+ufw allow 22/tcp
+ufw allow 80/tcp
+ufw allow 443/tcp
+ufw --force enable
 
-echo "=== DANIEL AI Status ==="
-pm2 status
+echo "✅ Firewall configured"
 
+# ============================================================================
+# 9. VERIFICATION
+# ============================================================================
 echo ""
-echo "=== Recent Logs (last 50 lines) ==="
-pm2 logs daniel-ai --lines 50 --nostream
-
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "✅ DEPLOYMENT COMPLETE!"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
-echo "=== Disk Usage ==="
-df -h
-
+echo "📋 Application Status:"
+pm2 list
 echo ""
-echo "=== Memory Usage ==="
-free -h
-MONITOR_EOF
-
-sudo chmod +x /usr/local/bin/monitor-daniel-ai
-
-# Display summary
+echo "📊 Recent Logs:"
+pm2 logs daniel-ai --lines 20
 echo ""
-echo -e "${GREEN}✅ DEPLOYMENT COMPLETE!${NC}"
+echo "🌐 Your app is now available at:"
+echo "   http://$DOMAIN  (redirects to https)"
+echo "   https://$DOMAIN"
 echo ""
-echo "==================================================="
-echo -e "${GREEN}🎉 DANIEL AI is now running!${NC}"
-echo "==================================================="
+echo "📝 Useful Commands:"
+echo "   pm2 status                 # Check process status"
+echo "   pm2 logs daniel-ai         # View logs"
+echo "   pm2 restart daniel-ai      # Restart app"
+echo "   systemctl restart nginx    # Restart web server"
 echo ""
-echo -e "🌍 Application URL: ${BLUE}https://$DOMAIN${NC}"
-echo -e "📊 Monitor app: ${BLUE}monitor-daniel-ai${NC}"
+echo "🗄️  Database:"
+echo "   Host: localhost"
+echo "   User: daniel-ai_user"
+echo "   Password: change_this_password_immediately"
+echo "   Database: daniel-ai_db"
 echo ""
-echo "Useful Commands:"
-echo "  pm2 status              # Check app status"
-echo "  pm2 logs $APP_NAME       # View application logs"
-echo "  pm2 restart $APP_NAME    # Restart app"
-echo "  pm2 stop $APP_NAME       # Stop app"
-echo "  sudo systemctl reload nginx  # Reload web server"
-echo ""
-echo "Important:"
-echo "  ⚠️  Change PostgreSQL password: sudo -u postgres psql"
-echo "  ⚠️  Update DATABASE_URL environment variable"
-echo "  ⚠️  Set your AI provider API keys in settings"
-echo ""
-echo "Logs:"
-echo "  Application: /home/$APP_USER/.pm2/logs/"
-echo "  Nginx: /var/log/nginx/"
-echo "  PostgreSQL: /var/log/postgresql/"
+echo "⚠️  SECURITY NOTES:"
+echo "   1. Change the database password immediately!"
+echo "   2. Keep SSH keys secure"
+echo "   3. Monitor logs regularly: pm2 logs"
 echo ""
