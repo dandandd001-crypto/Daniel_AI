@@ -121,10 +121,29 @@ fi
 echo -e "${YELLOW}🎯 Installing PM2 process manager...${NC}"
 sudo npm install -g pm2
 
-# Start application with PM2
-echo -e "${YELLOW}▶️  Starting application...${NC}"
+# Create ecosystem config file (.cjs because package.json uses "type": "module")
+echo -e "${YELLOW}📝 Creating PM2 ecosystem config...${NC}"
 cd "$APP_DIR"
-sudo -u "$APP_USER" pm2 start npm --name "$APP_NAME" -- start
+cat > ecosystem.config.cjs << ECOSYSTEM_EOF
+module.exports = {
+  apps: [{
+    name: '$APP_NAME',
+    script: 'dist/index.cjs',
+    instances: 1,
+    env: {
+      DATABASE_URL: 'postgresql://$DB_USER:change_this_password_immediately@localhost:5432/$DB_NAME',
+      NODE_ENV: 'production',
+      PORT: '5000',
+      PROJECTS_DIR: '/var/www/danielai/projects'
+    }
+  }]
+};
+ECOSYSTEM_EOF
+
+# Start application with PM2 using ecosystem config
+echo -e "${YELLOW}▶️  Starting application...${NC}"
+sudo pm2 kill
+sudo -u "$APP_USER" pm2 start ecosystem.config.cjs
 sudo -u "$APP_USER" pm2 startup
 sudo -u "$APP_USER" pm2 save
 
