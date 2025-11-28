@@ -1,0 +1,32 @@
+ubuntu@ip-172-31-72-58:/var/www/danielai/Daniel_AI$ curl http://localhost:5000/
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+
+    <meta property="og:title" content="DANIEL AI DEV" />
+    <meta property="og:description" content="Your personal AI coding assistant. Build anything with unlimited AI power." />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="https://replit.com/public/images/opengraph.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="@replit" />
+    <meta name="twitter:title" content="DANIEL AI DEV" />
+    <meta name="twitter:description" content="Your personal AI coding assistant. Build anything with unlimited AI power." />
+    <meta name="twitter:image" content="https://replit.com/public/images/opengraph.png" />
+
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <script type="module" crossorigin src="/assets/index-BkIYCJLA.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-BS8vZDwG.css">
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>ubuntu@ip-172-31-72-58:/var/www/danielai/Daniel_AI$ sudo tail -30 /var/log/nginx/error.log
+2025/11/28 00:05:23 [error] 50939#50939: *88 connect() failed (111: Connection refused) while connecting to upstream, client: 167.86.95.210, server: danielai.mooo.com, request: "GET /.env HTTP/1.1", upstream: "http://127.0.0.1:5000/.env", host: "13.222.109.97"
+2025/11/28 00:13:21 [error] 50939#50939: *90 connect() failed (111: Connection refused) while connecting to upstream, client: 102.88.114.182, server: danielai.mooo.com, request: "GET /favicon.ico HTTP/1.1", upstream: "http://127.0.0.1:5000/favicon.ico", host: "danielai.mooo.com", referrer: "http://danielai.mooo.com/"
+2025/11/28 00:38:17 [error] 50940#50940: *145 connect() failed (111: Connection refused) while connecting to upstream, client: 83.142.209.120, server: danielai.mooo.com, request: "GET /cgi-bin/luci/;stok=/locale HTTP/1.1", upstream: "http://127.0.0.1:5000/cgi-bin/luci/;stok=/locale", host: "13.222.109.97:80"
+ubuntu@ip-172-31-72-58:/var/www/danielai/Daniel_AI$
